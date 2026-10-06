@@ -1,0 +1,514 @@
+Simeulue;Kabupaten;Aceh
+Aceh Singkil;Kabupaten;Aceh
+Aceh Selatan;Kabupaten;Aceh
+Aceh Tenggara;Kabupaten;Aceh
+Aceh Timur;Kabupaten;Aceh
+Aceh Tengah;Kabupaten;Aceh
+Aceh Barat;Kabupaten;Aceh
+Aceh Besar;Kabupaten;Aceh
+Pidie;Kabupaten;Aceh
+Bireuen;Kabupaten;Aceh
+Aceh Utara;Kabupaten;Aceh
+Aceh Barat Daya;Kabupaten;Aceh
+Gayo Lues;Kabupaten;Aceh
+Aceh Tamiang;Kabupaten;Aceh
+Nagan Raya;Kabupaten;Aceh
+Aceh Jaya;Kabupaten;Aceh
+Bener Meriah;Kabupaten;Aceh
+Pidie Jaya;Kabupaten;Aceh
+Banda Aceh;Kota;Aceh
+Sabang;Kota;Aceh
+Langsa;Kota;Aceh
+Lhokseumawe;Kota;Aceh
+Subulussalam;Kota;Aceh
+Nias;Kabupaten;Sumatera Utara
+Mandailing Natal;Kabupaten;Sumatera Utara
+Tapanuli Selatan;Kabupaten;Sumatera Utara
+Tapanuli Tengah;Kabupaten;Sumatera Utara
+Tapanuli Utara;Kabupaten;Sumatera Utara
+Toba Samosir;Kabupaten;Sumatera Utara
+Labuhan Batu;Kabupaten;Sumatera Utara
+Asahan;Kabupaten;Sumatera Utara
+Simalungun;Kabupaten;Sumatera Utara
+Dairi;Kabupaten;Sumatera Utara
+Karo;Kabupaten;Sumatera Utara
+Deli Serdang;Kabupaten;Sumatera Utara
+Langkat;Kabupaten;Sumatera Utara
+Nias Selatan;Kabupaten;Sumatera Utara
+Humbang Hasundutan;Kabupaten;Sumatera Utara
+Pakpak Bharat;Kabupaten;Sumatera Utara
+Samosir;Kabupaten;Sumatera Utara
+Serdang Bedagai;Kabupaten;Sumatera Utara
+Batu Bara;Kabupaten;Sumatera Utara
+Padang Lawas Utara;Kabupaten;Sumatera Utara
+Padang Lawas;Kabupaten;Sumatera Utara
+Labuhan Batu Selatan;Kabupaten;Sumatera Utara
+Labuhan Batu Utara;Kabupaten;Sumatera Utara
+Nias Utara;Kabupaten;Sumatera Utara
+Nias Barat;Kabupaten;Sumatera Utara
+Sibolga;Kota;Sumatera Utara
+Tanjung Balai;Kota;Sumatera Utara
+Pematang Siantar;Kota;Sumatera Utara
+Tebing Tinggi;Kota;Sumatera Utara
+Medan;Kota;Sumatera Utara
+Binjai;Kota;Sumatera Utara
+Padangsidimpuan;Kota;Sumatera Utara
+Gunungsitoli;Kota;Sumatera Utara
+Kepulauan Mentawai;Kabupaten;Sumatera Barat
+Pesisir Selatan;Kabupaten;Sumatera Barat
+Solok;Kabupaten;Sumatera Barat
+Sijunjung;Kabupaten;Sumatera Barat
+Tanah Datar;Kabupaten;Sumatera Barat
+Padang Pariaman;Kabupaten;Sumatera Barat
+Agam;Kabupaten;Sumatera Barat
+Lima Puluh Kota;Kabupaten;Sumatera Barat
+Pasaman;Kabupaten;Sumatera Barat
+Solok Selatan;Kabupaten;Sumatera Barat
+Dharmasraya;Kabupaten;Sumatera Barat
+Pasaman Barat;Kabupaten;Sumatera Barat
+Padang;Kota;Sumatera Barat
+Solok;Kota;Sumatera Barat
+Sawah Lunto;Kota;Sumatera Barat
+Padang Panjang;Kota;Sumatera Barat
+Bukittinggi;Kota;Sumatera Barat
+Payakumbuh;Kota;Sumatera Barat
+Pariaman;Kota;Sumatera Barat
+Kuantan Singingi;Kabupaten;Riau
+Indragiri Hulu;Kabupaten;Riau
+Indragiri Hilir;Kabupaten;Riau
+Pelalawan;Kabupaten;Riau
+S I A K;Kabupaten;Riau
+Kampar;Kabupaten;Riau
+Rokan Hulu;Kabupaten;Riau
+Bengkalis;Kabupaten;Riau
+Rokan Hilir;Kabupaten;Riau
+Kepulauan Meranti;Kabupaten;Riau
+Pekanbaru;Kota;Riau
+D U M A I;Kota;Riau
+Kerinci;Kabupaten;Jambi
+Merangin;Kabupaten;Jambi
+Sarolangun;Kabupaten;Jambi
+Batang Hari;Kabupaten;Jambi
+Muaro Jambi;Kabupaten;Jambi
+Tanjung Jabung Timur;Kabupaten;Jambi
+Tanjung Jabung Barat;Kabupaten;Jambi
+Tebo;Kabupaten;Jambi
+Bungo;Kabupaten;Jambi
+Jambi;Kota;Jambi
+Sungai Penuh;Kota;Jambi
+Ogan Komering Ulu;Kabupaten;Sumatera Selatan
+Ogan Komering Ilir;Kabupaten;Sumatera Selatan
+Muara Enim;Kabupaten;Sumatera Selatan
+Lahat;Kabupaten;Sumatera Selatan
+Musi Rawas;Kabupaten;Sumatera Selatan
+Musi Banyuasin;Kabupaten;Sumatera Selatan
+Banyu Asin;Kabupaten;Sumatera Selatan
+Ogan Komering Ulu Selatan;Kabupaten;Sumatera Selatan
+Ogan Komering Ulu Timur;Kabupaten;Sumatera Selatan
+Ogan Ilir;Kabupaten;Sumatera Selatan
+Empat Lawang;Kabupaten;Sumatera Selatan
+Penukal Abab Lematang Ilir;Kabupaten;Sumatera Selatan
+Musi Rawas Utara;Kabupaten;Sumatera Selatan
+Palembang;Kota;Sumatera Selatan
+Prabumulih;Kota;Sumatera Selatan
+Pagar Alam;Kota;Sumatera Selatan
+Lubuklinggau;Kota;Sumatera Selatan
+Bengkulu Selatan;Kabupaten;Bengkulu
+Rejang Lebong;Kabupaten;Bengkulu
+Bengkulu Utara;Kabupaten;Bengkulu
+Kaur;Kabupaten;Bengkulu
+Seluma;Kabupaten;Bengkulu
+Mukomuko;Kabupaten;Bengkulu
+Lebong;Kabupaten;Bengkulu
+Kepahiang;Kabupaten;Bengkulu
+Bengkulu Tengah;Kabupaten;Bengkulu
+Bengkulu;Kota;Bengkulu
+Lampung Barat;Kabupaten;Lampung
+Tanggamus;Kabupaten;Lampung
+Lampung Selatan;Kabupaten;Lampung
+Lampung Timur;Kabupaten;Lampung
+Lampung Tengah;Kabupaten;Lampung
+Lampung Utara;Kabupaten;Lampung
+Way Kanan;Kabupaten;Lampung
+Tulangbawang;Kabupaten;Lampung
+Pesawaran;Kabupaten;Lampung
+Pringsewu;Kabupaten;Lampung
+Mesuji;Kabupaten;Lampung
+Tulang Bawang Barat;Kabupaten;Lampung
+Pesisir Barat;Kabupaten;Lampung
+Bandar Lampung;Kota;Lampung
+Metro;Kota;Lampung
+Bangka;Kabupaten;Kepulauan Bangka Belitung
+Belitung;Kabupaten;Kepulauan Bangka Belitung
+Bangka Barat;Kabupaten;Kepulauan Bangka Belitung
+Bangka Tengah;Kabupaten;Kepulauan Bangka Belitung
+Bangka Selatan;Kabupaten;Kepulauan Bangka Belitung
+Belitung Timur;Kabupaten;Kepulauan Bangka Belitung
+Pangkal Pinang;Kota;Kepulauan Bangka Belitung
+Karimun;Kabupaten;Kepulauan Riau
+Bintan;Kabupaten;Kepulauan Riau
+Natuna;Kabupaten;Kepulauan Riau
+Lingga;Kabupaten;Kepulauan Riau
+Kepulauan Anambas;Kabupaten;Kepulauan Riau
+B A T A M;Kota;Kepulauan Riau
+Tanjung Pinang;Kota;Kepulauan Riau
+Kepulauan Seribu;Kabupaten;DKI Jakarta
+Jakarta Selatan;Kota;DKI Jakarta
+Jakarta Timur;Kota;DKI Jakarta
+Jakarta Pusat;Kota;DKI Jakarta
+Jakarta Barat;Kota;DKI Jakarta
+Jakarta Utara;Kota;DKI Jakarta
+Bogor;Kabupaten;Jawa Barat
+Sukabumi;Kabupaten;Jawa Barat
+Cianjur;Kabupaten;Jawa Barat
+Bandung;Kabupaten;Jawa Barat
+Garut;Kabupaten;Jawa Barat
+Tasikmalaya;Kabupaten;Jawa Barat
+Ciamis;Kabupaten;Jawa Barat
+Kuningan;Kabupaten;Jawa Barat
+Cirebon;Kabupaten;Jawa Barat
+Majalengka;Kabupaten;Jawa Barat
+Sumedang;Kabupaten;Jawa Barat
+Indramayu;Kabupaten;Jawa Barat
+Subang;Kabupaten;Jawa Barat
+Purwakarta;Kabupaten;Jawa Barat
+Karawang;Kabupaten;Jawa Barat
+Bekasi;Kabupaten;Jawa Barat
+Bandung Barat;Kabupaten;Jawa Barat
+Pangandaran;Kabupaten;Jawa Barat
+Bogor;Kota;Jawa Barat
+Sukabumi;Kota;Jawa Barat
+Bandung;Kota;Jawa Barat
+Cirebon;Kota;Jawa Barat
+Bekasi;Kota;Jawa Barat
+Depok;Kota;Jawa Barat
+Cimahi;Kota;Jawa Barat
+Tasikmalaya;Kota;Jawa Barat
+Banjar;Kota;Jawa Barat
+Cilacap;Kabupaten;Jawa Tengah
+Banyumas;Kabupaten;Jawa Tengah
+Purbalingga;Kabupaten;Jawa Tengah
+Banjarnegara;Kabupaten;Jawa Tengah
+Kebumen;Kabupaten;Jawa Tengah
+Purworejo;Kabupaten;Jawa Tengah
+Wonosobo;Kabupaten;Jawa Tengah
+Magelang;Kabupaten;Jawa Tengah
+Boyolali;Kabupaten;Jawa Tengah
+Klaten;Kabupaten;Jawa Tengah
+Sukoharjo;Kabupaten;Jawa Tengah
+Wonogiri;Kabupaten;Jawa Tengah
+Karanganyar;Kabupaten;Jawa Tengah
+Sragen;Kabupaten;Jawa Tengah
+Grobogan;Kabupaten;Jawa Tengah
+Blora;Kabupaten;Jawa Tengah
+Rembang;Kabupaten;Jawa Tengah
+Pati;Kabupaten;Jawa Tengah
+Kudus;Kabupaten;Jawa Tengah
+Jepara;Kabupaten;Jawa Tengah
+Demak;Kabupaten;Jawa Tengah
+Semarang;Kabupaten;Jawa Tengah
+Temanggung;Kabupaten;Jawa Tengah
+Kendal;Kabupaten;Jawa Tengah
+Batang;Kabupaten;Jawa Tengah
+Pekalongan;Kabupaten;Jawa Tengah
+Pemalang;Kabupaten;Jawa Tengah
+Tegal;Kabupaten;Jawa Tengah
+Brebes;Kabupaten;Jawa Tengah
+Magelang;Kota;Jawa Tengah
+Surakarta;Kota;Jawa Tengah
+Salatiga;Kota;Jawa Tengah
+Semarang;Kota;Jawa Tengah
+Pekalongan;Kota;Jawa Tengah
+Tegal;Kota;Jawa Tengah
+Kulon Progo;Kabupaten;DI Yogyakarta
+Bantul;Kabupaten;DI Yogyakarta
+Gunung Kidul;Kabupaten;DI Yogyakarta
+Sleman;Kabupaten;DI Yogyakarta
+Yogyakarta;Kota;DI Yogyakarta
+Pacitan;Kabupaten;Jawa Timur
+Ponorogo;Kabupaten;Jawa Timur
+Trenggalek;Kabupaten;Jawa Timur
+Tulungagung;Kabupaten;Jawa Timur
+Blitar;Kabupaten;Jawa Timur
+Kediri;Kabupaten;Jawa Timur
+Malang;Kabupaten;Jawa Timur
+Lumajang;Kabupaten;Jawa Timur
+Jember;Kabupaten;Jawa Timur
+Banyuwangi;Kabupaten;Jawa Timur
+Bondowoso;Kabupaten;Jawa Timur
+Situbondo;Kabupaten;Jawa Timur
+Probolinggo;Kabupaten;Jawa Timur
+Pasuruan;Kabupaten;Jawa Timur
+Sidoarjo;Kabupaten;Jawa Timur
+Mojokerto;Kabupaten;Jawa Timur
+Jombang;Kabupaten;Jawa Timur
+Nganjuk;Kabupaten;Jawa Timur
+Madiun;Kabupaten;Jawa Timur
+Magetan;Kabupaten;Jawa Timur
+Ngawi;Kabupaten;Jawa Timur
+Bojonegoro;Kabupaten;Jawa Timur
+Tuban;Kabupaten;Jawa Timur
+Lamongan;Kabupaten;Jawa Timur
+Gresik;Kabupaten;Jawa Timur
+Bangkalan;Kabupaten;Jawa Timur
+Sampang;Kabupaten;Jawa Timur
+Pamekasan;Kabupaten;Jawa Timur
+Sumenep;Kabupaten;Jawa Timur
+Kediri;Kota;Jawa Timur
+Blitar;Kota;Jawa Timur
+Malang;Kota;Jawa Timur
+Probolinggo;Kota;Jawa Timur
+Pasuruan;Kota;Jawa Timur
+Mojokerto;Kota;Jawa Timur
+Madiun;Kota;Jawa Timur
+Surabaya;Kota;Jawa Timur
+Batu;Kota;Jawa Timur
+Pandeglang;Kabupaten;Banten
+Lebak;Kabupaten;Banten
+Tangerang;Kabupaten;Banten
+Serang;Kabupaten;Banten
+Tangerang;Kota;Banten
+Cilegon;Kota;Banten
+Serang;Kota;Banten
+Tangerang Selatan;Kota;Banten
+Jembrana;Kabupaten;Bali
+Tabanan;Kabupaten;Bali
+Badung;Kabupaten;Bali
+Gianyar;Kabupaten;Bali
+Klungkung;Kabupaten;Bali
+Bangli;Kabupaten;Bali
+Karang Asem;Kabupaten;Bali
+Buleleng;Kabupaten;Bali
+Denpasar;Kota;Bali
+Lombok Barat;Kabupaten;Nusa Tenggara Barat
+Lombok Tengah;Kabupaten;Nusa Tenggara Barat
+Lombok Timur;Kabupaten;Nusa Tenggara Barat
+Sumbawa;Kabupaten;Nusa Tenggara Barat
+Dompu;Kabupaten;Nusa Tenggara Barat
+Bima;Kabupaten;Nusa Tenggara Barat
+Sumbawa Barat;Kabupaten;Nusa Tenggara Barat
+Lombok Utara;Kabupaten;Nusa Tenggara Barat
+Mataram;Kota;Nusa Tenggara Barat
+Bima;Kota;Nusa Tenggara Barat
+Sumba Barat;Kabupaten;Nusa Tenggara Timur
+Sumba Timur;Kabupaten;Nusa Tenggara Timur
+Kupang;Kabupaten;Nusa Tenggara Timur
+Timor Tengah Selatan;Kabupaten;Nusa Tenggara Timur
+Timor Tengah Utara;Kabupaten;Nusa Tenggara Timur
+Belu;Kabupaten;Nusa Tenggara Timur
+Alor;Kabupaten;Nusa Tenggara Timur
+Lembata;Kabupaten;Nusa Tenggara Timur
+Flores Timur;Kabupaten;Nusa Tenggara Timur
+Sikka;Kabupaten;Nusa Tenggara Timur
+Ende;Kabupaten;Nusa Tenggara Timur
+Ngada;Kabupaten;Nusa Tenggara Timur
+Manggarai;Kabupaten;Nusa Tenggara Timur
+Rote Ndao;Kabupaten;Nusa Tenggara Timur
+Manggarai Barat;Kabupaten;Nusa Tenggara Timur
+Sumba Tengah;Kabupaten;Nusa Tenggara Timur
+Sumba Barat Daya;Kabupaten;Nusa Tenggara Timur
+Nagekeo;Kabupaten;Nusa Tenggara Timur
+Manggarai Timur;Kabupaten;Nusa Tenggara Timur
+Sabu Raijua;Kabupaten;Nusa Tenggara Timur
+Malaka;Kabupaten;Nusa Tenggara Timur
+Kupang;Kota;Nusa Tenggara Timur
+Sambas;Kabupaten;Kalimantan Barat
+Bengkayang;Kabupaten;Kalimantan Barat
+Landak;Kabupaten;Kalimantan Barat
+Mempawah;Kabupaten;Kalimantan Barat
+Sanggau;Kabupaten;Kalimantan Barat
+Ketapang;Kabupaten;Kalimantan Barat
+Sintang;Kabupaten;Kalimantan Barat
+Kapuas Hulu;Kabupaten;Kalimantan Barat
+Sekadau;Kabupaten;Kalimantan Barat
+Melawi;Kabupaten;Kalimantan Barat
+Kayong Utara;Kabupaten;Kalimantan Barat
+Kubu Raya;Kabupaten;Kalimantan Barat
+Pontianak;Kota;Kalimantan Barat
+Singkawang;Kota;Kalimantan Barat
+Kotawaringin Barat;Kabupaten;Kalimantan Tengah
+Kotawaringin Timur;Kabupaten;Kalimantan Tengah
+Kapuas;Kabupaten;Kalimantan Tengah
+Barito Selatan;Kabupaten;Kalimantan Tengah
+Barito Utara;Kabupaten;Kalimantan Tengah
+Sukamara;Kabupaten;Kalimantan Tengah
+Lamandau;Kabupaten;Kalimantan Tengah
+Seruyan;Kabupaten;Kalimantan Tengah
+Katingan;Kabupaten;Kalimantan Tengah
+Pulang Pisau;Kabupaten;Kalimantan Tengah
+Gunung Mas;Kabupaten;Kalimantan Tengah
+Barito Timur;Kabupaten;Kalimantan Tengah
+Murung Raya;Kabupaten;Kalimantan Tengah
+Palangka Raya;Kota;Kalimantan Tengah
+Tanah Laut;Kabupaten;Kalimantan Selatan
+Kota Baru;Kabupaten;Kalimantan Selatan
+Banjar;Kabupaten;Kalimantan Selatan
+Barito Kuala;Kabupaten;Kalimantan Selatan
+Tapin;Kabupaten;Kalimantan Selatan
+Hulu Sungai Selatan;Kabupaten;Kalimantan Selatan
+Hulu Sungai Tengah;Kabupaten;Kalimantan Selatan
+Hulu Sungai Utara;Kabupaten;Kalimantan Selatan
+Tabalong;Kabupaten;Kalimantan Selatan
+Tanah Bumbu;Kabupaten;Kalimantan Selatan
+Balangan;Kabupaten;Kalimantan Selatan
+Banjarmasin;Kota;Kalimantan Selatan
+Banjar Baru;Kota;Kalimantan Selatan
+Paser;Kabupaten;Kalimantan Timur
+Kutai Barat;Kabupaten;Kalimantan Timur
+Kutai Kartanegara;Kabupaten;Kalimantan Timur
+Kutai Timur;Kabupaten;Kalimantan Timur
+Berau;Kabupaten;Kalimantan Timur
+Penajam Paser Utara;Kabupaten;Kalimantan Timur
+Mahakam Hulu;Kabupaten;Kalimantan Timur
+Balikpapan;Kota;Kalimantan Timur
+Samarinda;Kota;Kalimantan Timur
+Bontang;Kota;Kalimantan Timur
+Malinau;Kabupaten;Kalimantan Utara
+Bulungan;Kabupaten;Kalimantan Utara
+Tana Tidung;Kabupaten;Kalimantan Utara
+Nunukan;Kabupaten;Kalimantan Utara
+Tarakan;Kota;Kalimantan Utara
+Bolaang Mongondow;Kabupaten;Sulawesi Utara
+Minahasa;Kabupaten;Sulawesi Utara
+Kepulauan Sangihe;Kabupaten;Sulawesi Utara
+Kepulauan Talaud;Kabupaten;Sulawesi Utara
+Minahasa Selatan;Kabupaten;Sulawesi Utara
+Minahasa Utara;Kabupaten;Sulawesi Utara
+Bolaang Mongondow Utara;Kabupaten;Sulawesi Utara
+Siau Tagulandang Biaro;Kabupaten;Sulawesi Utara
+Minahasa Tenggara;Kabupaten;Sulawesi Utara
+Bolaang Mongondow Selatan;Kabupaten;Sulawesi Utara
+Bolaang Mongondow Timur;Kabupaten;Sulawesi Utara
+Manado;Kota;Sulawesi Utara
+Bitung;Kota;Sulawesi Utara
+Tomohon;Kota;Sulawesi Utara
+Kotamobagu;Kota;Sulawesi Utara
+Banggai Kepulauan;Kabupaten;Sulawesi Tengah
+Banggai;Kabupaten;Sulawesi Tengah
+Morowali;Kabupaten;Sulawesi Tengah
+Poso;Kabupaten;Sulawesi Tengah
+Donggala;Kabupaten;Sulawesi Tengah
+Toli-Toli;Kabupaten;Sulawesi Tengah
+Buol;Kabupaten;Sulawesi Tengah
+Parigi Moutong;Kabupaten;Sulawesi Tengah
+Tojo Una-Una;Kabupaten;Sulawesi Tengah
+Sigi;Kabupaten;Sulawesi Tengah
+Banggai Laut;Kabupaten;Sulawesi Tengah
+Morowali Utara;Kabupaten;Sulawesi Tengah
+Palu;Kota;Sulawesi Tengah
+Kepulauan Selayar;Kabupaten;Sulawesi Selatan
+Bulukumba;Kabupaten;Sulawesi Selatan
+Bantaeng;Kabupaten;Sulawesi Selatan
+Jeneponto;Kabupaten;Sulawesi Selatan
+Takalar;Kabupaten;Sulawesi Selatan
+Gowa;Kabupaten;Sulawesi Selatan
+Sinjai;Kabupaten;Sulawesi Selatan
+Maros;Kabupaten;Sulawesi Selatan
+Pangkajene Dan Kepulauan;Kabupaten;Sulawesi Selatan
+Barru;Kabupaten;Sulawesi Selatan
+Bone;Kabupaten;Sulawesi Selatan
+Soppeng;Kabupaten;Sulawesi Selatan
+Wajo;Kabupaten;Sulawesi Selatan
+Sidenreng Rappang;Kabupaten;Sulawesi Selatan
+Pinrang;Kabupaten;Sulawesi Selatan
+Enrekang;Kabupaten;Sulawesi Selatan
+Luwu;Kabupaten;Sulawesi Selatan
+Tana Toraja;Kabupaten;Sulawesi Selatan
+Luwu Utara;Kabupaten;Sulawesi Selatan
+Luwu Timur;Kabupaten;Sulawesi Selatan
+Toraja Utara;Kabupaten;Sulawesi Selatan
+Makassar;Kota;Sulawesi Selatan
+Parepare;Kota;Sulawesi Selatan
+Palopo;Kota;Sulawesi Selatan
+Buton;Kabupaten;Sulawesi Tenggara
+Muna;Kabupaten;Sulawesi Tenggara
+Konawe;Kabupaten;Sulawesi Tenggara
+Kolaka;Kabupaten;Sulawesi Tenggara
+Konawe Selatan;Kabupaten;Sulawesi Tenggara
+Bombana;Kabupaten;Sulawesi Tenggara
+Wakatobi;Kabupaten;Sulawesi Tenggara
+Kolaka Utara;Kabupaten;Sulawesi Tenggara
+Buton Utara;Kabupaten;Sulawesi Tenggara
+Konawe Utara;Kabupaten;Sulawesi Tenggara
+Kolaka Timur;Kabupaten;Sulawesi Tenggara
+Konawe Kepulauan;Kabupaten;Sulawesi Tenggara
+Muna Barat;Kabupaten;Sulawesi Tenggara
+Buton Tengah;Kabupaten;Sulawesi Tenggara
+Buton Selatan;Kabupaten;Sulawesi Tenggara
+Kendari;Kota;Sulawesi Tenggara
+Baubau;Kota;Sulawesi Tenggara
+Boalemo;Kabupaten;Gorontalo
+Gorontalo;Kabupaten;Gorontalo
+Pohuwato;Kabupaten;Gorontalo
+Bone Bolango;Kabupaten;Gorontalo
+Gorontalo Utara;Kabupaten;Gorontalo
+Gorontalo;Kota;Gorontalo
+Majene;Kabupaten;Sulawesi Barat
+Polewali Mandar;Kabupaten;Sulawesi Barat
+Mamasa;Kabupaten;Sulawesi Barat
+Mamuju;Kabupaten;Sulawesi Barat
+Mamuju Utara;Kabupaten;Sulawesi Barat
+Mamuju Tengah;Kabupaten;Sulawesi Barat
+Maluku Tenggara Barat;Kabupaten;Maluku
+Maluku Tenggara;Kabupaten;Maluku
+Maluku Tengah;Kabupaten;Maluku
+Buru;Kabupaten;Maluku
+Kepulauan Aru;Kabupaten;Maluku
+Seram Bagian Barat;Kabupaten;Maluku
+Seram Bagian Timur;Kabupaten;Maluku
+Maluku Barat Daya;Kabupaten;Maluku
+Buru Selatan;Kabupaten;Maluku
+Ambon;Kota;Maluku
+Tual;Kota;Maluku
+Halmahera Barat;Kabupaten;Maluku Utara
+Halmahera Tengah;Kabupaten;Maluku Utara
+Kepulauan Sula;Kabupaten;Maluku Utara
+Halmahera Selatan;Kabupaten;Maluku Utara
+Halmahera Utara;Kabupaten;Maluku Utara
+Halmahera Timur;Kabupaten;Maluku Utara
+Pulau Morotai;Kabupaten;Maluku Utara
+Pulau Taliabu;Kabupaten;Maluku Utara
+Ternate;Kota;Maluku Utara
+Tidore Kepulauan;Kota;Maluku Utara
+Fakfak;Kabupaten;Papua Barat
+Kaimana;Kabupaten;Papua Barat
+Teluk Wondama;Kabupaten;Papua Barat
+Teluk Bintuni;Kabupaten;Papua Barat
+Manokwari;Kabupaten;Papua Barat
+Sorong Selatan;Kabupaten;Papua Barat
+Sorong;Kabupaten;Papua Barat
+Raja Ampat;Kabupaten;Papua Barat
+Tambrauw;Kabupaten;Papua Barat
+Maybrat;Kabupaten;Papua Barat
+Manokwari Selatan;Kabupaten;Papua Barat
+Pegunungan Arfak;Kabupaten;Papua Barat
+Sorong;Kota;Papua Barat
+Merauke;Kabupaten;Papua
+Jayawijaya;Kabupaten;Papua
+Jayapura;Kabupaten;Papua
+Nabire;Kabupaten;Papua
+Kepulauan Yapen;Kabupaten;Papua
+Biak Numfor;Kabupaten;Papua
+Paniai;Kabupaten;Papua
+Puncak Jaya;Kabupaten;Papua
+Mimika;Kabupaten;Papua
+Boven Digoel;Kabupaten;Papua
+Mappi;Kabupaten;Papua
+Asmat;Kabupaten;Papua
+Yahukimo;Kabupaten;Papua
+Pegunungan Bintang;Kabupaten;Papua
+Tolikara;Kabupaten;Papua
+Sarmi;Kabupaten;Papua
+Keerom;Kabupaten;Papua
+Waropen;Kabupaten;Papua
+Supiori;Kabupaten;Papua
+Mamberamo Raya;Kabupaten;Papua
+Nduga;Kabupaten;Papua
+Lanny Jaya;Kabupaten;Papua
+Mamberamo Tengah;Kabupaten;Papua
+Yalimo;Kabupaten;Papua
+Puncak;Kabupaten;Papua
+Dogiyai;Kabupaten;Papua
+Intan Jaya;Kabupaten;Papua
+Deiyai;Kabupaten;Papua
+Jayapura;Kota;Papua

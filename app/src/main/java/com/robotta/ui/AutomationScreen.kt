@@ -39,6 +39,7 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
     var delayMs by rememberSaveable { mutableStateOf(settings.stepDelayMs.toFloat()) }
     var limit by rememberSaveable { mutableStateOf(settings.sessionLimit.toFloat()) }
     var autoPick by rememberSaveable { mutableStateOf(settings.autoPickPhotos) }
+    var showPanel by rememberSaveable { mutableStateOf(settings.showFloatingPanel) }
     var apiKey by rememberSaveable { mutableStateOf(settings.geminiApiKey) }
     var model by rememberSaveable { mutableStateOf(settings.geminiModel) }
 
@@ -46,6 +47,7 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
         delayMs = settings.stepDelayMs.toFloat()
         limit = settings.sessionLimit.toFloat()
         autoPick = settings.autoPickPhotos
+        showPanel = settings.showFloatingPanel
         apiKey = settings.geminiApiKey
         model = settings.geminiModel
     }
@@ -56,7 +58,6 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        ScreenHeader("Pengaturan")
 
         SectionCard(title = "Layanan aksesibilitas") {
             Text(
@@ -100,6 +101,19 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
                 Spacer(Modifier.width(8.dp))
                 Switch(checked = autoPick, onCheckedChange = { autoPick = it })
             }
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Panel melayang", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Jendela kontrol kecil di atas Facebook: status, progres, tombol Berikutnya/Lewati/Stop. Bisa digeser.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Switch(checked = showPanel, onCheckedChange = { showPanel = it })
+            }
         }
 
         SectionCard(title = "AI judul & deskripsi (Gemini)") {
@@ -136,6 +150,7 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
                         stepDelayMs = delayMs.roundToLong().coerceIn(AppSettings.MIN_DELAY, AppSettings.MAX_DELAY),
                         sessionLimit = limit.roundToInt().coerceIn(1, AppSettings.MAX_SESSION),
                         autoPickPhotos = autoPick,
+                        showFloatingPanel = showPanel,
                         geminiApiKey = apiKey,
                         geminiModel = model.ifBlank { AppSettings.DEFAULT_MODEL }
                     )

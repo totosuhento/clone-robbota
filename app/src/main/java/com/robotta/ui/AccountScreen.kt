@@ -48,7 +48,7 @@ fun AccountScreen(vm: AppViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        ScreenHeader("Profil toko", "Dipakai untuk bingkai foto, lokasi default, dan penutup deskripsi.")
+        ScreenHeader("Kelola Akun", "Dipakai untuk bingkai foto, lokasi default, dan penutup deskripsi.")
 
         SectionCard(title = "Akun Facebook") {
             Text(

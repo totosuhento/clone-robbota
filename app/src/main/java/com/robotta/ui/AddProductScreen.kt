@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -88,12 +89,15 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
     var condition by rememberSaveable { mutableStateOf(Conditions.NEW) }
     var description by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
+    var hashtags by rememberSaveable { mutableStateOf("") }
     var photosJson by rememberSaveable { mutableStateOf("[]") }
     var frameStyle by rememberSaveable { mutableStateOf(FrameStyle.SQUARE_WHITE) }
     var frameColorIndex by rememberSaveable { mutableStateOf(0) }
 
     var busy by remember { mutableStateOf<String?>(null) }
     var titleOptions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var categoryOptions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showRegionPicker by remember { mutableStateOf(false) }
     var showErrors by remember { mutableStateOf(false) }
 
     val photos = ProductImages.decode(photosJson)
@@ -108,6 +112,7 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                 condition = p.condition
                 description = p.description
                 location = p.location
+                hashtags = p.hashtags
                 photosJson = p.imagePaths
             }
             loaded = true
@@ -157,6 +162,7 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                                 condition = condition,
                                 description = description,
                                 location = location,
+                                hashtags = hashtags,
                                 photos = photos,
                                 onSaved = onClose
                             )
@@ -290,16 +296,32 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                     supportingText = { Text("${title.length}/100") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                FilledTonalButton(
+                Button(
                     enabled = busy == null && title.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
                     onClick = {
                         scope.launch {
-                            busy = "AI membuat judul…"
-                            titleOptions = vm.generateTitles(title, category, condition)
+                            busy = "Menggenerate konten AI…"
+                            vm.generateContent(title, category, condition, description)?.let { c ->
+                                titleOptions = c.titles
+                                if (c.description.isNotBlank()) description = c.description
+                                if (c.hashtags.isNotBlank()) hashtags = c.hashtags
+                                categoryOptions = c.categories
+                                if (category.isBlank()) c.categories.firstOrNull()?.let { category = it }
+                            }
                             busy = null
                         }
-                    }
-                ) { Text("Buat 3 judul dengan AI") }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Buat Konten AI") }
+                Text(
+                    "Isi nama produk dulu. AI membuat pilihan judul, deskripsi, hashtag & saran kategori — periksa sebelum disimpan.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (titleOptions.isNotEmpty()) {
                     Text("Ketuk untuk memakai:", style = MaterialTheme.typography.labelMedium)
                     titleOptions.forEach { option ->
@@ -332,6 +354,14 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(6.dp))
+                if (categoryOptions.isNotEmpty()) {
+                    Text("Saran AI:", style = MaterialTheme.typography.labelMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        categoryOptions.forEach { c ->
+                            FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c) })
+                        }
+                    }
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CATEGORY_SUGGESTIONS.forEach { c ->
                         SuggestionChip(onClick = { category = c }, label = { Text(c) })
@@ -364,7 +394,17 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                             busy = null
                         }
                     }
-                ) { Text(if (description.isBlank()) "Tulis deskripsi dengan AI" else "Rapikan deskripsi dengan AI") }
+                ) { Text(if (description.isBlank()) "Tulis deskripsi saja dengan AI" else "Rapikan deskripsi dengan AI") }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = hashtags,
+                    onValueChange = { hashtags = it },
+                    label = { Text("Hashtag") },
+                    placeholder = { Text("#ikatpinggang #sabukkulit") },
+                    supportingText = { Text("Ditambahkan di akhir deskripsi. Ambil ide dari Riset Kata Kunci.") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 if (account.buildFooter().isNotBlank()) {
                     Text(
                         "Penutup dari Profil akan ditambahkan otomatis:\n${account.buildFooter()}",
@@ -376,10 +416,11 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Lokasi (kota/kecamatan)") },
+                    label = { Text("Lokasi barang") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedButton(onClick = { showRegionPicker = true }) { Text("Pilih dari daftar kota") }
             }
 
             Text(
@@ -389,5 +430,16 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                 fontWeight = FontWeight.Normal
             )
         }
+    }
+
+    if (showRegionPicker) {
+        RegionPickerDialog(
+            vm = vm,
+            onDismiss = { showRegionPicker = false },
+            onPick = {
+                location = it
+                showRegionPicker = false
+            }
+        )
     }
 }

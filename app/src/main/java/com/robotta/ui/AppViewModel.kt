@@ -5,6 +5,9 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.robotta.ai.AiContent
+import com.robotta.ai.KeywordIdea
+import com.robotta.ai.KeywordResearch
 import com.robotta.ai.TitleGenerator
 import com.robotta.automation.AutomationEngine
 import com.robotta.automation.EngineState
@@ -12,6 +15,8 @@ import com.robotta.automation.LogLine
 import com.robotta.data.AppDatabase
 import com.robotta.data.AppSettings
 import com.robotta.data.CsvImporter
+import com.robotta.data.Region
+import com.robotta.data.Regions
 import com.robotta.data.SettingsStore
 import com.robotta.data.entities.Account
 import com.robotta.data.entities.Product
@@ -19,6 +24,7 @@ import com.robotta.data.entities.ProductImages
 import com.robotta.data.entities.ProductStatus
 import com.robotta.image.FrameProcessor
 import com.robotta.image.FrameStyle
+import com.robotta.image.GalleryExporter
 import com.robotta.image.PhotoStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -84,6 +90,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         condition: String,
         description: String,
         location: String,
+        hashtags: String,
         photos: List<String>,
         onSaved: () -> Unit
     ) {
@@ -102,6 +109,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                                 condition = condition,
                                 description = description.trim(),
                                 location = location.trim(),
+                                hashtags = TitleGenerator.normalizeHashtags(hashtags),
                                 imagePaths = ProductImages.encode(photos),
                                 status = newStatus,
                                 errorMessage = if (newStatus == ProductStatus.PENDING) "" else existing.errorMessage
@@ -118,6 +126,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                                 condition = condition,
                                 description = description.trim(),
                                 location = location.trim(),
+                                hashtags = TitleGenerator.normalizeHashtags(hashtags),
                                 imagePaths = ProductImages.encode(photos)
                             )
                         )
@@ -240,6 +249,73 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             null
         }
     }
+
+    /** "Buat Konten AI": judul + deskripsi + hashtag + saran kategori untuk satu produk. */
+    suspend fun generateContent(name: String, category: String, condition: String, notes: String): AiContent? {
+        val gen = generator()
+        if (!gen.hasApiKey) say("API key Gemini kosong — memakai template offline")
+        return try {
+            gen.generateContent(name, category, condition, notes)
+        } catch (e: Exception) {
+            Log.e(TAG, "Buat Konten AI gagal", e)
+            say(e.message ?: "AI gagal")
+            null
+        }
+    }
+
+    suspend fun researchKeywords(seed: String, expand: Boolean, onProgress: (Int, Int) -> Unit): List<KeywordIdea> =
+        try {
+            KeywordResearch(generator()).research(seed, expand, onProgress).also {
+                if (it.isEmpty()) say("Tidak ada saran. Cek koneksi internet atau coba kata lain.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Riset kata kunci gagal", e)
+            say("Riset gagal: ${e.message}")
+            emptyList()
+        }
+
+    // ---------------------------------------------------------------- riset lokasi
+
+    suspend fun searchRegions(query: String, province: String?): List<Region> = withContext(Dispatchers.Default) {
+        Regions.search(getApplication(), query, province)
+    }
+
+    suspend fun provinces(): List<String> = withContext(Dispatchers.IO) { Regions.provinces(getApplication()) }
+
+    fun setDefaultLocation(location: String) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val current = accountDao.getProfile() ?: Account()
+                    accountDao.save(current.copy(defaultLocation = location, updatedAt = System.currentTimeMillis()))
+                }
+                say("Lokasi default: $location")
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal menyimpan lokasi", e)
+                say("Gagal menyimpan lokasi")
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- auto frame (alat terpisah)
+
+    /** Memberi bingkai lalu menyimpan hasilnya ke galeri (Pictures/AutoFrame). Satu foto -> satu hasil. */
+    suspend fun frameToGallery(uris: List<Uri>, style: FrameStyle, text: String, priceText: String, accentColor: Int): List<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val sources = uris.mapNotNull { photoStore.importFromUri(it) }
+                val framed = frameProcessor.applyToAll(sources, style, text, priceText, accentColor)
+                val saved = GalleryExporter(getApplication()).saveCopies(framed, GalleryExporter.FRAME_FOLDER)
+                // Foto sumber sementara tidak dibutuhkan lagi.
+                sources.filter { it !in framed }.forEach { photoStore.deleteIfOwned(it) }
+                say("$saved foto disimpan ke galeri (Pictures/${GalleryExporter.FRAME_FOLDER})")
+                framed
+            } catch (e: Exception) {
+                Log.e(TAG, "Auto frame gagal", e)
+                say("Gagal: ${e.message}")
+                emptyList()
+            }
+        }
 
     fun testAi() {
         viewModelScope.launch {

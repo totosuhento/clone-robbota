@@ -10,6 +10,8 @@ data class AppSettings(
     val sessionLimit: Int = 10,
     /** Coba pilih foto di galeri secara otomatis; jika gagal, kamu diminta memilih sendiri. */
     val autoPickPhotos: Boolean = true,
+    /** Panel kontrol melayang di atas Facebook selama sesi berjalan. */
+    val showFloatingPanel: Boolean = true,
     val geminiApiKey: String = "",
     val geminiModel: String = DEFAULT_MODEL
 ) {
@@ -30,6 +32,7 @@ class SettingsStore(context: Context) {
             stepDelayMs = prefs.getLong(KEY_DELAY, 800L).coerceIn(AppSettings.MIN_DELAY, AppSettings.MAX_DELAY),
             sessionLimit = prefs.getInt(KEY_LIMIT, 10).coerceIn(1, AppSettings.MAX_SESSION),
             autoPickPhotos = prefs.getBoolean(KEY_AUTO_PHOTO, true),
+            showFloatingPanel = prefs.getBoolean(KEY_PANEL, true),
             geminiApiKey = prefs.getString(KEY_GEMINI_KEY, "") ?: "",
             geminiModel = (prefs.getString(KEY_GEMINI_MODEL, AppSettings.DEFAULT_MODEL) ?: "")
                 .ifBlank { AppSettings.DEFAULT_MODEL }
@@ -45,6 +48,7 @@ class SettingsStore(context: Context) {
                 .putLong(KEY_DELAY, settings.stepDelayMs)
                 .putInt(KEY_LIMIT, settings.sessionLimit)
                 .putBoolean(KEY_AUTO_PHOTO, settings.autoPickPhotos)
+                .putBoolean(KEY_PANEL, settings.showFloatingPanel)
                 .putString(KEY_GEMINI_KEY, settings.geminiApiKey.trim())
                 .putString(KEY_GEMINI_MODEL, settings.geminiModel.trim())
                 .apply()
@@ -59,6 +63,7 @@ class SettingsStore(context: Context) {
         const val KEY_DELAY = "step_delay_ms"
         const val KEY_LIMIT = "session_limit"
         const val KEY_AUTO_PHOTO = "auto_pick_photos"
+        const val KEY_PANEL = "show_floating_panel"
         const val KEY_GEMINI_KEY = "gemini_api_key"
         const val KEY_GEMINI_MODEL = "gemini_model"
     }

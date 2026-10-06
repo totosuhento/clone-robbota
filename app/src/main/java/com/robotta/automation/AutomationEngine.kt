@@ -315,7 +315,9 @@ object AutomationEngine {
 
     private fun buildDescription(product: Product): String {
         val footer = account.buildFooter()
-        return listOf(product.description.trim(), footer).filter { it.isNotBlank() }.joinToString("\n\n")
+        return listOf(product.description.trim(), footer, product.hashtags.trim())
+            .filter { it.isNotBlank() }
+            .joinToString("\n\n")
     }
 
     // ---------------------------------------------------------------- helper status

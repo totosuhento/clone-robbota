@@ -16,7 +16,13 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import com.robotta.data.SettingsStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Layanan aksesibilitas yang mengisi form "Jual Barang" di aplikasi Facebook.
@@ -30,23 +36,61 @@ class MarketAutomationService : AccessibilityService() {
 
     // ---------------------------------------------------------------- lifecycle
 
+    private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var panel: FloatingPanel? = null
+    private var ownAppForeground = false
+    private var wasActive = false
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         Log.d(TAG, "Layanan aksesibilitas tersambung")
+        panel = FloatingPanel(this)
+        uiScope.launch {
+            AutomationEngine.state.collect { state ->
+                if (state.isActive && !wasActive) panel?.resetDismissed()
+                wasActive = state.isActive
+                updatePanel()
+            }
+        }
         AutomationEngine.onServiceConnected()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         Log.d(TAG, "Layanan aksesibilitas dilepas")
+        releasePanel()
         instance = null
         AutomationEngine.onServiceDisconnected()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
+        releasePanel()
         if (instance === this) instance = null
         super.onDestroy()
+    }
+
+    private fun releasePanel() {
+        panel?.hide()
+        panel = null
+        uiScope.cancel()
+    }
+
+    /** Panel tampil saat sesi aktif, kecuali sedang membuka aplikasi ini sendiri. */
+    private fun updatePanel() {
+        val p = panel ?: return
+        val state = AutomationEngine.state.value
+        val enabled = try {
+            SettingsStore(this).load().showFloatingPanel
+        } catch (e: Exception) {
+            true
+        }
+        if (enabled && state.isActive && !ownAppForeground && !p.dismissed) {
+            p.show()
+            p.render(state)
+        } else {
+            p.hide()
+        }
     }
 
     override fun onInterrupt() {
@@ -56,6 +100,13 @@ class MarketAutomationService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         try {
+            if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                val active = rootInActiveWindow?.packageName?.toString()
+                if (active != null && (active == packageName) != ownAppForeground) {
+                    ownAppForeground = active == packageName
+                    updatePanel()
+                }
+            }
             if (event.packageName?.toString() != FbLabels.FB_PACKAGE) return
             if (event.eventType != AccessibilityEvent.TYPE_VIEW_CLICKED) return
             if (!AutomationEngine.isAwaitingPublish()) return
@@ -395,10 +446,11 @@ class MarketAutomationService : AccessibilityService() {
         val field = inline ?: waitFor(3_000L) { roots ->
             roots.flatMap { r -> NodeFinder.findAll(r) { NodeFinder.isEditable(it) } }.firstOrNull()
         } ?: return false
-        if (!setText(field, location)) return false
+        // "Makassar, Sulawesi Selatan" -> ketik "Makassar", lalu pilih saran yang memuat nama kota.
+        val city = location.substringBefore(',').trim().ifBlank { location }
+        if (!setText(field, city)) return false
         delay(2_000L)
-        val firstWord = location.split(',', ' ').firstOrNull { it.isNotBlank() } ?: location
-        val suggestion = waitFor(5_000L) { NodeFinder.findByLabels(it, listOf(location, firstWord), MatchMode.CONTAINS) }
+        val suggestion = waitFor(5_000L) { NodeFinder.findByLabels(it, listOf(location, city), MatchMode.CONTAINS) }
             ?: return false
         return clickNode(suggestion)
     }

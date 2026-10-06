@@ -6,19 +6,30 @@ Facebook secara otomatis lewat AccessibilityService, lalu **berhenti** supaya ka
 memeriksa dan menekan **Publikasikan** sendiri. Setelah itu asisten mencatat produk sebagai
 terposting dan menyiapkan produk berikutnya saat kamu menekan "Produk berikutnya".
 
-## Fitur
+## Fitur (v2 — tampilan mengikuti video Robotta)
 
-| Fitur | Keterangan |
+Menu samping dikelompokkan seperti Robotta:
+
+| Menu | Isi |
 |---|---|
-| Manajemen produk | Tambah, edit, hapus, status (Menunggu / Terposting / Gagal / Dilewati), database Room |
-| Import CSV | Dari Excel / Google Sheets (simpan sebagai CSV). Contoh: `contoh-produk.csv` |
-| Asisten isi form | Buka form Jual → pilih foto → isi judul, harga, kategori, kondisi, deskripsi, lokasi |
-| Deteksi publikasi | Saat kamu menekan Publikasikan, produk otomatis ditandai Terposting |
-| Progres & log | "Produk 3/10 sedang diproses…", log per langkah, alasan gagal |
-| Notifikasi | Tombol *Sudah dipublikasikan*, *Produk berikutnya*, *Lewati*, *Berhenti* langsung dari notifikasi |
-| Bingkai toko | 4 template (persegi putih, bingkai + nama toko, watermark, label harga), 5 warna |
-| AI judul & deskripsi | Gemini API (ada kuota gratis); tanpa API key memakai template offline |
-| Profil toko | Nama toko, lokasi default, nomor WA & penutup deskripsi otomatis |
+| **Dashboard** | Ringkasan status (Menunggu / Terposting / Gagal), status asisten ON/OFF, aksi cepat, produk terakhir terposting |
+| **Kelola Akun** | Nama toko, nomor WA, penutup deskripsi, lokasi default |
+| **BOT FB MARKETPLACE → Auto Posting** | Mulai sesi, progres "Produk 3/10…", log aktivitas |
+| **Riset Kata Kunci** | Saran pencarian Google Indonesia (kata dasar + a–z) + ide AI; pilih lalu salin sebagai daftar atau hashtag |
+| **Riset Lokasi** | 514 kabupaten/kota se-Indonesia, filter per provinsi, jadikan lokasi default |
+| **DATA POSTING → Data Posting** | Satu data = satu produk: foto, judul, harga, kategori, kondisi, deskripsi, hashtag, lokasi; import CSV |
+| **Auto Frame** | Bingkai/watermark/label harga untuk foto, simpan ke galeri `Pictures/AutoFrame` |
+| **BANTUAN → Tutorial / Pengaturan** | Langkah pemakaian; jeda langkah, batas per sesi, panel melayang, API key Gemini |
+
+Lainnya:
+
+- **Buat Konten AI** (tombol merah di form produk): satu klik menghasilkan 3 pilihan judul, deskripsi,
+  hashtag, dan saran kategori untuk produk itu (Gemini; tanpa API key memakai template offline).
+- **Panel melayang** di atas aplikasi Facebook selama sesi: status, progres, dan tombol
+  *Sudah terbit / Lewati / Berikutnya / Stop*. Bisa digeser dan diperkecil jadi gelembung.
+  Tidak butuh izin "tampil di atas aplikasi lain".
+- Asisten mendeteksi saat kamu menekan **Publikasikan** dan menandai produk sebagai terposting.
+- Notifikasi dengan tombol aksi yang sama.
 
 ### Sengaja berbeda dari PRD
 
@@ -28,7 +39,9 @@ Facebook dan menjadi penyebab utama akun kena batas atau diblokir:
 - posting massal tanpa pengawasan (1000+ produk) dan menekan Publikasikan otomatis,
 - rotasi banyak akun Facebook,
 - jeda acak "biar tidak kelihatan bot",
-- "1 foto jadi 1000 varian" (bingkai di sini mengganti foto, bukan memperbanyaknya).
+- "1 foto jadi 1000 varian" (bingkai di sini mengganti foto, bukan memperbanyaknya),
+- 10 variasi judul + font Unicode + harga acak untuk memasang produk yang sama berulang kali
+  ("anti duplikat"), lokasi acak ke banyak kota, login multi-akun lewat cookies, dan share otomatis ke grup.
 
 Sebagai gantinya: satu akun (yang login di aplikasi Facebook), batas produk per sesi
 (default 10, maks 30), dan setiap produk dipublikasikan oleh kamu sendiri.
@@ -54,12 +67,12 @@ Sebagai gantinya: satu akun (yang login di aplikasi Facebook), batas produk per 
    **Asisten Marketplace – Isi Form Otomatis** → Aktifkan.
    Android 13+: jika tombolnya abu-abu, buka **Info Aplikasi → ⋮ (kanan atas) → Izinkan setelan terbatas**, lalu ulangi.
 2. Izinkan **notifikasi** saat diminta.
-3. Isi **Profil** (nama toko, lokasi default, WA).
-4. Tambahkan produk (atau import CSV), lalu tambahkan **foto** di tiap produk.
-5. Tab **Posting** → **Mulai sesi**. Jangan sentuh layar sementara asisten mengisi.
-6. Saat notifikasi "Siap dipublikasikan" muncul: periksa isian di Facebook, lengkapi yang
+3. Isi **Kelola Akun** (nama toko, WA) dan pilih lokasi lewat **Riset Lokasi**.
+4. **Data Posting** → tambah produk (atau import CSV), tambahkan **foto**, tekan **Buat Konten AI**.
+5. **Auto Posting** → **Mulai sesi**. Jangan sentuh layar sementara asisten mengisi.
+6. Saat panel melayang menunjukkan "Siap": periksa isian di Facebook, lengkapi yang
    ditandai, lalu tekan **Publikasikan** (dan *Berikutnya* jika Facebook memintanya).
-7. Tekan **Produk berikutnya** di notifikasi atau aplikasi.
+7. Tekan **Berikutnya** di panel melayang, notifikasi, atau aplikasi.
 
 Pastikan aplikasi Facebook sudah login, dan bahasa Facebook Indonesia atau Inggris.
 
@@ -82,13 +95,17 @@ Tips lain:
 ```
 app/src/main/java/com/robotta/
 ├── MainActivity.kt, RobottaApp.kt
-├── ui/            MainScreen, ProductListScreen, AddProductScreen, AccountScreen,
+├── ui/            Navigation (menu samping), DashboardScreen, MainScreen (Auto Posting),
+│                  ProductListScreen + AddProductScreen (Data Posting), AccountScreen,
+│                  KeywordScreen, LocationScreen, AutoFrameScreen, TutorialScreen,
 │                  AutomationScreen (pengaturan), AppViewModel, Components, theme/
-├── automation/    MarketAutomationService (AccessibilityService), AutomationEngine,
+├── automation/    MarketAutomationService (AccessibilityService), FloatingPanel, AutomationEngine,
 │                  ActionStep (+status & log), NodeFinder, FbLabels, EngineActionReceiver
-├── data/          AppDatabase, ProductDao, AccountDao, SettingsStore, CsvImporter, entities/
+├── data/          AppDatabase (v2 + migrasi), ProductDao, AccountDao, SettingsStore,
+│                  CsvImporter, Regions, entities/
 ├── image/         FrameProcessor, PhotoStore, GalleryExporter, ImageUtils
-├── ai/            TitleGenerator (Gemini)
+├── ai/            TitleGenerator + AiContent (Gemini), KeywordResearch
+assets/wilayah.txt 514 kabupaten/kota (data 34 provinsi; provinsi pemekaran Papua 2022 masih di bawah Papua)
 └── util/          NotificationHelper
 ```
 

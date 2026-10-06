@@ -1,6 +1,7 @@
 package com.robotta.data
 
 import android.util.Log
+import com.robotta.ai.TitleGenerator
 import com.robotta.data.entities.Conditions
 import com.robotta.data.entities.Product
 
@@ -8,7 +9,7 @@ import com.robotta.data.entities.Product
  * Import produk dari CSV (bisa dibuat dari Excel/Google Sheets: File > Download > CSV).
  *
  * Baris pertama = header. Kolom wajib: judul, harga.
- * Kolom opsional: kategori, kondisi, deskripsi, lokasi.
+ * Kolom opsional: kategori, kondisi, deskripsi, lokasi, hashtag.
  * Pemisah koma (,) atau titik koma (;) dideteksi otomatis.
  * Foto ditambahkan lewat aplikasi setelah import.
  */
@@ -47,6 +48,7 @@ object CsvImporter {
         val iCondition = indexOf("kondisi", "condition")
         val iDescription = indexOf("deskripsi", "description", "keterangan")
         val iLocation = indexOf("lokasi", "location", "kota")
+        val iHashtag = indexOf("hashtag", "hashtags", "tagar")
 
         if (iTitle < 0 || iPrice < 0) {
             return Result(emptyList(), listOf("Header wajib berisi kolom 'judul' dan 'harga'."))
@@ -75,7 +77,8 @@ object CsvImporter {
                 category = col(iCategory),
                 condition = Conditions.normalize(col(iCondition)),
                 description = col(iDescription),
-                location = col(iLocation).ifBlank { defaultLocation }
+                location = col(iLocation).ifBlank { defaultLocation },
+                hashtags = TitleGenerator.normalizeHashtags(col(iHashtag))
             )
         }
         Log.d(TAG, "CSV: ${products.size} produk valid, ${errors.size} baris dilewati")

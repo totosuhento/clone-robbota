@@ -15,6 +15,8 @@ data class Product(
     val condition: String,
     val description: String,
     val location: String,
+    /** Hashtag dipisah spasi, ditambahkan di akhir deskripsi saat posting. */
+    val hashtags: String = "",
     /** JSON array berisi path absolut foto di penyimpanan internal aplikasi. */
     val imagePaths: String = "[]",
     /** Salah satu nilai di [ProductStatus]. */

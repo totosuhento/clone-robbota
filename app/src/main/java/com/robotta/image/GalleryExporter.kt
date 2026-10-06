@@ -22,7 +22,7 @@ class GalleryExporter(private val context: Context) {
                 val deleted = context.contentResolver.delete(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?",
-                    arrayOf("%${Environment.DIRECTORY_PICTURES}/$FOLDER%")
+                    arrayOf("%${Environment.DIRECTORY_PICTURES}/$FOLDER/")
                 )
                 Log.d(TAG, "Hapus $deleted foto lama dari galeri")
             } else {
@@ -51,9 +51,9 @@ class GalleryExporter(private val context: Context) {
             val takenAt = base + (paths.size - i) * 1000L
             val name = "ma_${takenAt}_$i.jpg"
             val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                exportScoped(src, name, takenAt)
+                exportScoped(src, name, takenAt, FOLDER)
             } else {
-                exportLegacy(src, name)
+                exportLegacy(src, name, FOLDER)
             }
             if (ok) count++
         }
@@ -61,12 +61,31 @@ class GalleryExporter(private val context: Context) {
         return count
     }
 
-    private fun exportScoped(src: File, name: String, takenAt: Long): Boolean {
+    /** Simpan salinan foto ke Pictures/<folder> tanpa menghapus isi lama (untuk Auto Frame). */
+    fun saveCopies(paths: List<String>, folder: String): Int {
+        var count = 0
+        paths.forEachIndexed { i, path ->
+            val src = File(path)
+            if (!src.exists()) return@forEachIndexed
+            val now = System.currentTimeMillis()
+            val name = "frame_${now}_$i.jpg"
+            val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                exportScoped(src, name, now, folder)
+            } else {
+                exportLegacy(src, name, folder)
+            }
+            if (ok) count++
+        }
+        Log.d(TAG, "Disimpan $count foto ke Pictures/$folder")
+        return count
+    }
+
+    private fun exportScoped(src: File, name: String, takenAt: Long, folder: String): Boolean {
         val resolver = context.contentResolver
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$FOLDER")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$folder")
             put(MediaStore.Images.Media.DATE_TAKEN, takenAt)
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
@@ -95,8 +114,8 @@ class GalleryExporter(private val context: Context) {
         }
     }
 
-    private fun exportLegacy(src: File, name: String): Boolean = try {
-        val dest = File(legacyDir().apply { mkdirs() }, name)
+    private fun exportLegacy(src: File, name: String, folder: String): Boolean = try {
+        val dest = File(legacyDir(folder).apply { mkdirs() }, name)
         src.copyTo(dest, overwrite = true)
         MediaScannerConnection.scanFile(context, arrayOf(dest.absolutePath), arrayOf("image/jpeg"), null)
         true
@@ -106,11 +125,12 @@ class GalleryExporter(private val context: Context) {
     }
 
     @Suppress("DEPRECATION")
-    private fun legacyDir(): File =
-        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), FOLDER)
+    private fun legacyDir(folder: String = FOLDER): File =
+        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), folder)
 
     companion object {
         const val FOLDER = "MarketAsisten"
+        const val FRAME_FOLDER = "AutoFrame"
         private const val TAG = "GalleryExporter"
     }
 }

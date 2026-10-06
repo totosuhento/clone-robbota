@@ -72,7 +72,7 @@ fun ProductListScreen(vm: AppViewModel, onAdd: () -> Unit, onEdit: (Int) -> Unit
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            item { ScreenHeader("Produk", "${products.size} produk tersimpan") }
+            item { ScreenHeader("Data Posting", "${products.size} produk tersimpan · 1 data = 1 produk") }
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { showCsvHelp = true }) { Text("Import CSV") }
@@ -141,7 +141,7 @@ fun ProductListScreen(vm: AppViewModel, onAdd: () -> Unit, onEdit: (Int) -> Unit
             title = { Text("Format CSV") },
             text = {
                 Text(
-                    "Baris pertama header. Wajib: judul, harga. Opsional: kategori, kondisi, deskripsi, lokasi.\n\n" +
+                    "Baris pertama header. Wajib: judul, harga. Opsional: kategori, kondisi, deskripsi, lokasi, hashtag.\n\n" +
                         "Contoh:\njudul,harga,kategori,kondisi,deskripsi,lokasi\n" +
                         "Kipas Angin Meja 16 inch,185000,Peralatan Rumah Tangga,Baru,Garansi 1 tahun,Banjar\n\n" +
                         "Dari Excel/Google Sheets: simpan sebagai CSV. Foto ditambahkan per produk setelah import."

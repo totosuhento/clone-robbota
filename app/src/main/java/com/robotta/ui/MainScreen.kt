@@ -59,7 +59,7 @@ fun MainScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { ScreenHeader("Asisten Marketplace", "Isi form Jual Barang otomatis — kamu yang publikasikan.") }
+        item { ScreenHeader("Auto Posting", "Asisten mengisi form Jual Barang, kamu yang memeriksa & mempublikasikan.") }
 
         if (!accessibilityOn) {
             item {

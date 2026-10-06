@@ -15,37 +15,48 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.robotta.automation.FbLabels
 import com.robotta.automation.MarketAutomationService
 import com.robotta.ui.AccountScreen
 import com.robotta.ui.AddProductScreen
+import com.robotta.ui.AppDrawer
 import com.robotta.ui.AppViewModel
+import com.robotta.ui.AutoFrameScreen
 import com.robotta.ui.AutomationScreen
+import com.robotta.ui.DashboardScreen
+import com.robotta.ui.KeywordScreen
+import com.robotta.ui.LocationScreen
 import com.robotta.ui.MainScreen
 import com.robotta.ui.ProductListScreen
+import com.robotta.ui.Screen
+import com.robotta.ui.StatusPill
+import com.robotta.ui.TutorialScreen
 import com.robotta.ui.theme.RobottaTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -117,14 +128,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Tab(val label: String, val icon: ImageVector) {
-    POSTING("Posting", Icons.Filled.PlayArrow),
-    PRODUCTS("Produk", Icons.Filled.ShoppingCart),
-    PROFILE("Profil", Icons.Filled.Person),
-    SETTINGS("Pengaturan", Icons.Filled.Settings)
-}
-
 /** Nilai editingId: null = tidak sedang mengedit, 0 = produk baru, >0 = id produk. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppRoot(
     accessibilityOn: Boolean,
@@ -133,7 +138,9 @@ private fun AppRoot(
 ) {
     val vm: AppViewModel = viewModel()
     val context = LocalContext.current
-    var tab by rememberSaveable { mutableStateOf(Tab.POSTING) }
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    var screen by rememberSaveable { mutableStateOf(Screen.DASHBOARD) }
     var editingId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(Unit) {
@@ -147,40 +154,64 @@ private fun AppRoot(
         return
     }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                Tab.entries.forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { tab = t },
-                        icon = { Icon(t.icon, contentDescription = null) },
-                        label = { Text(t.label) }
-                    )
-                }
+    BackHandler(enabled = drawerState.isOpen || screen != Screen.DASHBOARD) {
+        if (drawerState.isOpen) scope.launch { drawerState.close() } else screen = Screen.DASHBOARD
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AppDrawer(current = screen) {
+                screen = it
+                scope.launch { drawerState.close() }
             }
         }
-    ) { padding ->
-        Box(Modifier.padding(padding)) {
-            when (tab) {
-                Tab.POSTING -> MainScreen(
-                    vm = vm,
-                    accessibilityOn = accessibilityOn,
-                    onOpenAccessibility = onOpenAccessibility,
-                    onOpenFacebook = onOpenFacebook,
-                    onGoToProducts = { tab = Tab.PRODUCTS }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(screen.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                        }
+                    },
+                    actions = { StatusPill(accessibilityOn) }
                 )
-                Tab.PRODUCTS -> ProductListScreen(
-                    vm = vm,
-                    onAdd = { editingId = 0 },
-                    onEdit = { editingId = it }
-                )
-                Tab.PROFILE -> AccountScreen(vm = vm)
-                Tab.SETTINGS -> AutomationScreen(
-                    vm = vm,
-                    accessibilityOn = accessibilityOn,
-                    onOpenAccessibility = onOpenAccessibility
-                )
+            }
+        ) { padding ->
+            Box(Modifier.padding(padding)) {
+                when (screen) {
+                    Screen.DASHBOARD -> DashboardScreen(
+                        vm = vm,
+                        accessibilityOn = accessibilityOn,
+                        onOpenAccessibility = onOpenAccessibility,
+                        onNavigate = { screen = it },
+                        onAddProduct = { editingId = 0 }
+                    )
+                    Screen.ACCOUNT -> AccountScreen(vm = vm)
+                    Screen.AUTO_POSTING -> MainScreen(
+                        vm = vm,
+                        accessibilityOn = accessibilityOn,
+                        onOpenAccessibility = onOpenAccessibility,
+                        onOpenFacebook = onOpenFacebook,
+                        onGoToProducts = { screen = Screen.DATA_POSTING }
+                    )
+                    Screen.KEYWORDS -> KeywordScreen(vm = vm)
+                    Screen.LOCATION -> LocationScreen(vm = vm)
+                    Screen.DATA_POSTING -> ProductListScreen(
+                        vm = vm,
+                        onAdd = { editingId = 0 },
+                        onEdit = { editingId = it }
+                    )
+                    Screen.AUTO_FRAME -> AutoFrameScreen(vm = vm)
+                    Screen.TUTORIAL -> TutorialScreen()
+                    Screen.SETTINGS -> AutomationScreen(
+                        vm = vm,
+                        accessibilityOn = accessibilityOn,
+                        onOpenAccessibility = onOpenAccessibility
+                    )
+                }
             }
         }
     }
