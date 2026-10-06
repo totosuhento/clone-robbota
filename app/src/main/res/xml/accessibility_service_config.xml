@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sengaja TIDAK memakai android:packageNames="com.facebook.katana":
+  pemilih foto bawaan Android (Photo Picker) berjalan di paket lain, dan layanan
+  perlu membaca jendelanya. Penyaringan ke paket Facebook dilakukan di kode
+  (MarketAutomationService.onAccessibilityEvent dan roots()).
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeViewClicked|typeWindowStateChanged|typeViewTextChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews"
+    android:canPerformGestures="true"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="100" />

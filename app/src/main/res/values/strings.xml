@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Asisten Marketplace</string>
+    <string name="accessibility_service_label">Asisten Marketplace – Isi Form Otomatis</string>
+    <string name="accessibility_service_description">Layanan ini membaca dan mengisi form \"Jual Barang\" di aplikasi Facebook atas perintahmu: memilih foto, mengetik judul, harga, kategori, kondisi, deskripsi, dan lokasi produk dari daftar produkmu. Layanan TIDAK menekan tombol Publikasikan — kamu sendiri yang memeriksa dan mempublikasikan setiap produk. Layanan tidak membaca kata sandi dan tidak mengirim data layarmu ke mana pun.</string>
+</resources>
