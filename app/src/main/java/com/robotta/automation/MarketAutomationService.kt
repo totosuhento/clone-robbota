@@ -299,33 +299,103 @@ class MarketAutomationService : AccessibilityService() {
         return if (NodeFinder.findByLabels(fb, FbLabels.ADD_PHOTOS) != null) true else null
     }
 
-    suspend fun navigateToMarketplace(): Boolean =
-        tapByLabels(FbLabels.MARKETPLACE, 8_000L, MatchMode.STARTS_WITH)
+    /** Cek cepat (tanpa menunggu) apakah form Jual Barang sudah tampil. */
+    fun isSellFormShowing(): Boolean = formOrPhotoButtonVisible(roots()) == true
 
-    suspend fun tapSellButton(): Boolean =
-        tapByLabels(FbLabels.SELL, 6_000L, MatchMode.STARTS_WITH)
+    private fun fbRoots(): List<AccessibilityNodeInfo> =
+        roots().filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }
 
-    /** Membuka form Jual Barang: coba deep link, lalu navigasi manual lewat tab Marketplace. */
+    /** Tap label hanya di jendela Facebook (bukan aplikasi lain). */
+    private suspend fun tapInFacebook(labels: List<String>, timeoutMs: Long, mode: MatchMode = MatchMode.STARTS_WITH): Boolean {
+        val node = waitFor(timeoutMs) { roots ->
+            NodeFinder.findByLabels(roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }, labels, mode)
+        } ?: run {
+            Log.d(TAG, "Tidak ketemu di Facebook: $labels")
+            return false
+        }
+        Log.d(TAG, "Tap (FB): ${NodeFinder.label(node)}")
+        return clickNode(node)
+    }
+
+    suspend fun navigateToMarketplace(): Boolean {
+        if (tapInFacebook(FbLabels.MARKETPLACE, 6_000L)) return true
+        // Tab Marketplace tidak ada di bilah navigasi: buka lewat Menu (☰).
+        Log.d(TAG, "Tab Marketplace tidak ada, coba lewat Menu")
+        if (!tapInFacebook(FbLabels.MENU, 3_000L, MatchMode.EXACT) && !tapInFacebook(FbLabels.MENU, 2_000L)) return false
+        delay(1_500L)
+        repeat(3) {
+            if (tapInFacebook(FbLabels.MARKETPLACE, 2_500L)) return true
+            if (!scrollForward()) return false
+            delay(600L)
+        }
+        return false
+    }
+
+    suspend fun tapSellButton(): Boolean = tapInFacebook(FbLabels.SELL, 6_000L, MatchMode.EXACT) ||
+        tapInFacebook(FbLabels.SELL, 2_000L, MatchMode.STARTS_WITH)
+
+    /**
+     * Membuka form Jual Barang:
+     *  1. deep link facebook.com/marketplace/create/item,
+     *  2. jika gagal: Facebook -> Marketplace (atau Menu -> Marketplace) -> Jual
+     *     -> Buat tawaran baru -> Barang untuk dijual.
+     * Mengembalikan false jika form tidak terlihat; pemanggil lalu meminta pengguna membukanya.
+     */
     suspend fun openSellForm(stepDelay: Long): Boolean {
         if (launchCreateItemLink()) {
             if (waitFor(10_000L) { formOrPhotoButtonVisible(it) } != null) {
                 Log.d(TAG, "Form terbuka lewat deep link")
                 return true
             }
+            Log.d(TAG, "Deep link tidak membuka form. Layar: ${describeScreen()}")
         }
         Log.d(TAG, "Navigasi manual ke form Jual")
         if (!launchFacebookApp()) return false
         if (waitFor(10_000L) { if (isFacebookForeground()) true else null } == null) return false
         delay(stepDelay * 2)
-        if (!navigateToMarketplace()) return false
-        delay(stepDelay * 2)
-        if (!tapSellButton()) return false
-        delay(stepDelay * 2)
-        // Sebagian versi menampilkan pilihan jenis tawaran dulu.
-        if (waitFor(1_500L) { formOrPhotoButtonVisible(it) } == null) {
-            tapByLabels(FbLabels.ITEM_FOR_SALE, 5_000L, MatchMode.STARTS_WITH)
+
+        // Facebook mungkin sudah berada di form / halaman Jual dari percobaan sebelumnya.
+        if (isSellFormShowing()) return true
+        val onSellPage = NodeFinder.findByLabels(fbRoots(), FbLabels.CREATE_LISTING) != null
+        if (!onSellPage) {
+            if (!navigateToMarketplace()) {
+                Log.d(TAG, "Marketplace tidak ditemukan. Layar: ${describeScreen()}")
+                return false
+            }
+            delay(stepDelay * 2)
+            if (!tapSellButton()) {
+                Log.d(TAG, "Tombol Jual tidak ditemukan. Layar: ${describeScreen()}")
+                return false
+            }
+            delay(stepDelay * 2)
         }
-        return waitFor(10_000L) { formOrPhotoButtonVisible(it) } != null
+
+        // Halaman "Jual" -> "Buat tawaran baru" (jika ada).
+        if (waitFor(1_500L) { formOrPhotoButtonVisible(it) } == null) {
+            tapInFacebook(FbLabels.CREATE_LISTING, 4_000L)
+            delay(stepDelay * 2)
+        }
+        // Pilihan jenis tawaran -> "Barang untuk dijual" (jika ada).
+        if (waitFor(1_500L) { formOrPhotoButtonVisible(it) } == null) {
+            tapInFacebook(FbLabels.ITEM_FOR_SALE, 4_000L)
+        }
+        val ok = waitFor(10_000L) { formOrPhotoButtonVisible(it) } != null
+        if (!ok) Log.d(TAG, "Form tetap tidak terlihat. Layar: ${describeScreen()}")
+        return ok
+    }
+
+    /** Ringkasan teks yang terlihat di layar, untuk log diagnosa. */
+    fun describeScreen(maxItems: Int = 20): String = try {
+        roots().joinToString(" || ") { root ->
+            val texts = NodeFinder.findAll(root) { it.isVisibleToUser && NodeFinder.texts(it).isNotEmpty() }
+                .flatMap { NodeFinder.texts(it) }
+                .map { it.replace('\n', ' ').take(40) }
+                .distinct()
+                .take(maxItems)
+            "[${root.packageName}] " + texts.joinToString(" | ")
+        }.take(900).ifBlank { "(tidak ada jendela terbaca)" }
+    } catch (e: Exception) {
+        "(gagal membaca layar: ${e.message})"
     }
 
     // ---------------------------------------------------------------- foto
@@ -494,6 +564,13 @@ class MarketAutomationService : AccessibilityService() {
         @Volatile
         var instance: MarketAutomationService? = null
             private set
+
+        fun isInstalled(context: Context, pkg: String): Boolean = try {
+            context.packageManager.getPackageInfo(pkg, 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
 
         fun isEnabled(context: Context): Boolean {
             val expected = ComponentName(context, MarketAutomationService::class.java)

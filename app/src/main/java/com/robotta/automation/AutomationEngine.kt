@@ -38,6 +38,7 @@ object AutomationEngine {
     private const val TAG = "AutomationEngine"
     private const val MAX_LOGS = 200
     private const val USER_PHOTO_TIMEOUT_MS = 5 * 60_000L
+    private const val USER_FORM_TIMEOUT_MS = 3 * 60_000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -64,6 +65,15 @@ object AutomationEngine {
             return "Layanan aksesibilitas belum aktif. Aktifkan dulu di Pengaturan Aksesibilitas."
         }
         if (pending.isEmpty()) return "Tidak ada produk berstatus Menunggu."
+        if (!MarketAutomationService.isInstalled(context, FbLabels.FB_PACKAGE)) {
+            return if (MarketAutomationService.isInstalled(context, FbLabels.FB_LITE_PACKAGE)) {
+                "Terdeteksi Facebook Lite. Asisten hanya bisa bekerja dengan aplikasi Facebook biasa " +
+                    "(ikon biru \"Facebook\"), karena tampilan Facebook Lite tidak bisa dibaca layanan aksesibilitas. " +
+                    "Pasang Facebook dari Play Store lalu login."
+            } else {
+                "Aplikasi Facebook belum terpasang. Pasang dari Play Store lalu login."
+            }
+        }
 
         appContext = context.applicationContext
         this.settings = settings
@@ -154,10 +164,17 @@ object AutomationEngine {
             val product = queue.getOrNull(index)
             _state.value = EngineState.NeedsUser(
                 index + 1, queue.size, product?.title.orEmpty(),
-                "Layanan aksesibilitas mati. Aktifkan lagi lalu tekan Coba lagi.", canRetry = true
+                "Layanan aksesibilitas mati. Aktifkan lagi lalu tekan Coba lagi. Di HP Oppo/Realme/Vivo/Xiaomi: " +
+                    "izinkan Mulai otomatis dan matikan optimasi baterai untuk aplikasi ini (menu Pengaturan).",
+                canRetry = true
             )
         }
-        log(null, "Layanan aksesibilitas nonaktif.", LogLevel.WARN)
+        log(
+            null,
+            "Layanan aksesibilitas nonaktif. Jika mati sendiri, matikan optimasi baterai & izinkan Mulai otomatis " +
+                "untuk aplikasi ini (menu Pengaturan).",
+            LogLevel.WARN
+        )
     }
 
     // ---------------------------------------------------------------- inti
@@ -213,8 +230,20 @@ object AutomationEngine {
         // 2. Form Jual Barang
         working(product, ActionStep.OPEN_FORM)
         if (!service.openSellForm(d)) {
-            fail(product, "Form Jual Barang tidak ditemukan. Pastikan Facebook sudah login dan bahasanya Indonesia/Inggris.")
-            return
+            // Catat isi layar supaya label yang berbeda bisa ditambahkan ke FbLabels.
+            log(product.title, "Layar saat gagal: ${service.describeScreen(12)}", LogLevel.INFO)
+            needsUser(
+                product,
+                "Form Jual Barang belum bisa dibuka otomatis. Buka sendiri di Facebook: Marketplace → Jual → " +
+                    "Buat tawaran baru → Barang untuk dijual. Asisten lanjut mengisi begitu form terlihat (3 menit).",
+                canRetry = false,
+                autoContinue = true
+            )
+            if (service.waitFor(USER_FORM_TIMEOUT_MS, 800L) { if (service.isSellFormShowing()) true else null } == null) {
+                fail(product, "Form Jual Barang tidak terbuka dalam 3 menit. Kirim screenshot log ini untuk penyesuaian label.")
+                return
+            }
+            log(product.title, "Form dibuka manual, lanjut mengisi.", LogLevel.INFO)
         }
         delay(d)
 

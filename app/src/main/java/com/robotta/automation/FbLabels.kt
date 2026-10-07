@@ -9,13 +9,20 @@ package com.robotta.automation
  */
 object FbLabels {
     const val FB_PACKAGE = "com.facebook.katana"
+    /** Facebook Lite tidak didukung: tampilannya digambar sendiri, tidak terbaca layanan aksesibilitas. */
+    const val FB_LITE_PACKAGE = "com.facebook.lite"
 
     /** Deep link ke form buat tawaran barang. */
     const val CREATE_ITEM_URL = "https://www.facebook.com/marketplace/create/item"
 
     val MARKETPLACE = listOf("Marketplace")
-    val SELL = listOf("Jual", "Sell", "Buat tawaran baru", "Create new listing", "Buat tawaran", "Create listing")
-    val ITEM_FOR_SALE = listOf("Barang untuk dijual", "Barang", "Item for sale", "Items")
+    /** Tombol Menu (☰) — jalur cadangan bila tab Marketplace tidak ada di bilah navigasi. */
+    val MENU = listOf("Menu")
+    /** Tombol/chip "Jual" di halaman Marketplace. */
+    val SELL = listOf("Jual", "Sell")
+    /** Di halaman "Jual": tombol membuat tawaran. */
+    val CREATE_LISTING = listOf("Buat tawaran baru", "Create new listing", "Buat tawaran", "Create listing", "Tawarkan barang")
+    val ITEM_FOR_SALE = listOf("Barang untuk dijual", "Barang dijual", "Barang", "Item for sale", "Items", "Item")
 
     val ADD_PHOTOS = listOf("Tambahkan foto", "Tambah foto", "Tambahkan Foto", "Add photos", "Add photo", "Add Photos")
     val PICKER_DONE = listOf("Selesai", "Done", "Berikutnya", "Next", "Lanjutkan", "Continue", "Tambahkan", "Add")
