@@ -41,7 +41,8 @@ import com.robotta.BuildConfig
 enum class Screen(val title: String, val icon: ImageVector, val section: String) {
     DASHBOARD("Dashboard", Icons.Filled.Home, ""),
     ACCOUNT("Kelola Akun", Icons.Filled.Person, ""),
-    AUTO_POSTING("Auto Posting FB Marketplace", Icons.Filled.PlayArrow, "BOT FB MARKETPLACE"),
+    BROWSER_MODE("Auto Posting (Mode Browser)", Icons.Filled.PlayArrow, "BOT FB MARKETPLACE"),
+    AUTO_POSTING("Auto Posting (Aplikasi FB)", Icons.Filled.PlayArrow, "BOT FB MARKETPLACE"),
     KEYWORDS("Riset Kata Kunci", Icons.Filled.Search, "BOT FB MARKETPLACE"),
     LOCATION("Riset Lokasi", Icons.Filled.LocationOn, "BOT FB MARKETPLACE"),
     DATA_POSTING("Data Posting", Icons.AutoMirrored.Filled.List, "DATA POSTING"),

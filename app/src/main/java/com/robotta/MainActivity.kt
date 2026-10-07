@@ -47,6 +47,7 @@ import com.robotta.ui.AppDrawer
 import com.robotta.ui.AppViewModel
 import com.robotta.ui.AutoFrameScreen
 import com.robotta.ui.AutomationScreen
+import com.robotta.ui.BrowserModeScreen
 import com.robotta.ui.DashboardScreen
 import com.robotta.ui.KeywordScreen
 import com.robotta.ui.LocationScreen
@@ -197,6 +198,7 @@ private fun AppRoot(
                         onOpenFacebook = onOpenFacebook,
                         onGoToProducts = { screen = Screen.DATA_POSTING }
                     )
+                    Screen.BROWSER_MODE -> BrowserModeScreen(vm = vm, onGoToProducts = { screen = Screen.DATA_POSTING })
                     Screen.KEYWORDS -> KeywordScreen(vm = vm)
                     Screen.LOCATION -> LocationScreen(vm = vm)
                     Screen.DATA_POSTING -> ProductListScreen(

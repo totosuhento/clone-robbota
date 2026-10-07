@@ -25,6 +25,12 @@ private data class TutorialStep(val title: String, val body: String)
 
 private val STEPS = listOf(
     TutorialStep(
+        "Cara termudah: Mode Browser",
+        "Menu Auto Posting (Mode Browser) → Buka. Login Facebook sekali di browser itu. Bot membuka form, " +
+            "memasukkan foto dari Data Posting dan mengisi semua kolom. Kamu tinggal menekan \"Terbitkan\"; " +
+            "bot lanjut sendiri ke produk berikutnya. Langkah-langkah di bawah ini untuk mode Aplikasi FB."
+    ),
+    TutorialStep(
         "Aktifkan layanan aksesibilitas",
         "Pengaturan HP → Aksesibilitas → Aplikasi terinstal → \"Asisten Marketplace\" → Aktifkan. " +
             "Android 13+: jika abu-abu, buka Info Aplikasi → ⋮ → Izinkan setelan terbatas."

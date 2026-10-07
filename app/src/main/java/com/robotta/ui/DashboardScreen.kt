@@ -101,7 +101,8 @@ fun DashboardScreen(
             SectionCard(title = "Aksi cepat") {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onAddProduct) { Text("Tambah produk") }
-                    FilledTonalButton(onClick = { onNavigate(Screen.AUTO_POSTING) }) { Text("Auto Posting") }
+                    FilledTonalButton(onClick = { onNavigate(Screen.BROWSER_MODE) }) { Text("Mode Browser") }
+                    OutlinedButton(onClick = { onNavigate(Screen.AUTO_POSTING) }) { Text("Aplikasi FB") }
                     OutlinedButton(onClick = { onNavigate(Screen.KEYWORDS) }) { Text("Riset Kata Kunci") }
                     OutlinedButton(onClick = { onNavigate(Screen.LOCATION) }) { Text("Riset Lokasi") }
                     OutlinedButton(onClick = { onNavigate(Screen.AUTO_FRAME) }) { Text("Auto Frame") }
