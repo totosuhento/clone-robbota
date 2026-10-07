@@ -260,7 +260,8 @@ object AutomationEngine {
                     log(product.title, "Layar (foto): ${service.describeScreen(30)}", LogLevel.INFO)
                 }
                 val msg = "Pilih $exported foto teratas (folder ${GalleryExporter.FOLDER}), lalu tekan Selesai. " +
-                    "Asisten lanjut mengisi form setelah kamu kembali ke form."
+                    "Asisten lanjut mengisi form setelah kamu kembali ke form. Foto produk tidak muncul? " +
+                    "Setelan HP → Aplikasi → Facebook → Izin → Foto dan video → Izinkan semua."
                 needsUser(product, msg, canRetry = false, autoContinue = true)
                 if (!service.waitForUserPhotoSelection(USER_PHOTO_TIMEOUT_MS)) {
                     fail(product, "Waktu memilih foto habis (5 menit).")

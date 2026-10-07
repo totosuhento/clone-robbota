@@ -25,7 +25,7 @@ object NodeFinder {
     fun label(node: AccessibilityNodeInfo): String = texts(node).joinToString(" | ")
 
     fun normalize(s: String): String =
-        s.replace(' ', ' ').trim().lowercase(Locale.ROOT).replace(Regex("\\s+"), " ")
+        s.replace(' ', ' ').trim().trimStart('+', ' ').lowercase(Locale.ROOT).replace(Regex("\\s+"), " ")
 
     fun matchText(text: String, label: String, mode: MatchMode): Boolean {
         val a = normalize(text)

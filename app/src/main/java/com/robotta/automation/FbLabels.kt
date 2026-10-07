@@ -28,7 +28,10 @@ object FbLabels {
         "Pasang tawaran", "Jual sesuatu", "Tawarkan barang", "Buat baru",
         "Create new listing", "Create listing", "New listing", "Sell something"
     )
-    val ITEM_FOR_SALE = listOf("Barang untuk dijual", "Barang dijual", "Barang", "Item for sale", "Items", "Item")
+    /** Pilihan jenis tawaran di lembar "Jual barang" (dicari persis). */
+    val ITEM_FOR_SALE = listOf(
+        "Satu item", "Single item", "Barang untuk dijual", "Barang dijual", "Item for sale", "Barang", "Item"
+    )
 
     val ADD_PHOTOS = listOf("Tambahkan foto", "Tambah foto", "Tambahkan Foto", "Add photos", "Add photo", "Add Photos")
     /** Tombol konfirmasi di galeri foto (dicari persis). */
@@ -39,6 +42,8 @@ object FbLabels {
     /** Tombol konfirmasi yang memuat jumlah, mis. "Tambahkan (2)" / "Add 2". */
     val PICKER_DONE_PREFIX = listOf("Tambahkan", "Tambah", "Add", "Selesai", "Done", "Berikutnya", "Next")
     val CAMERA = listOf("Kamera", "Camera", "Ambil foto", "Take photo")
+    /** Bila "Tambahkan foto" memunculkan pilihan sumber dulu. */
+    val GALLERY_OPTION = listOf("Pilih dari galeri", "Pilih dari Galeri", "Galeri", "Gallery", "Choose from gallery", "Unggah foto")
 
     val TITLE = listOf("Judul", "Title")
     val PRICE = listOf("Harga", "Price")

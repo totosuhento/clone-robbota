@@ -497,43 +497,82 @@ class MarketAutomationService : AccessibilityService() {
             .sortedWith(compareBy({ NodeFinder.bounds(it).top }, { NodeFinder.bounds(it).left }))
     }
 
+    /**
+     * Memilih [count] foto produk dari galeri. Facebook versi baru meminta "foto utama dulu",
+     * jadi pemilihan bisa berlangsung beberapa putaran: foto 1, lalu "Tambahkan foto" lagi untuk sisanya.
+     * Foto produk sudah diekspor paling baru, jadi berada paling depan di galeri.
+     */
     suspend fun selectPhotos(count: Int, autoPick: Boolean, stepDelay: Long): PhotoPickResult {
         lastNote = null
-        val opened = tapInFacebook(FbLabels.ADD_PHOTOS, 6_000L)
-        if (!opened) {
-            Log.d(TAG, "Tombol tambah foto tidak ketemu. Layar: ${describeScreen()}")
+        if (!autoPick) {
+            tapInFacebook(FbLabels.ADD_PHOTOS, 6_000L)
             return PhotoPickResult.NEED_USER
         }
-        if (!autoPick) return PhotoPickResult.NEED_USER
-        delay(stepDelay)
+        var picked = 0
+        var round = 0
+        while (picked < count && round < 4) {
+            round++
+            val opened = tapInFacebook(FbLabels.ADD_PHOTOS, if (round == 1) 6_000L else 3_000L)
+            if (!opened) {
+                Log.d(TAG, "Tombol tambah foto tidak ketemu (putaran $round). Layar: ${describeScreen()}")
+                break
+            }
+            delay(stepDelay)
+            val r = pickRound(skip = picked, want = count - picked, stepDelay = stepDelay)
+            if (r <= 0) break
+            picked += r
+            delay(stepDelay)
+        }
+        return when {
+            picked >= count -> PhotoPickResult.DONE
+            picked > 0 -> {
+                lastNote = "Baru $picked dari $count foto yang ditambahkan — tambahkan sisanya bila perlu."
+                PhotoPickResult.DONE
+            }
+            else -> PhotoPickResult.NEED_USER
+        }
+    }
 
-        // Pemilih foto terbuka = muncul grid berisi banyak thumbnail.
-        val need = maxOf(3, count + 1)
-        val grid = waitFor(10_000L, 500L) { roots -> thumbnails(roots).takeIf { it.size >= need } }
+    /** Satu putaran di galeri. Mengembalikan jumlah foto yang berhasil ditambahkan (0 = gagal). */
+    private suspend fun pickRound(skip: Int, want: Int, stepDelay: Long): Int {
+        var grid = waitFor(5_000L, 500L) { roots -> thumbnails(roots).takeIf { it.size >= 3 } }
+        if (grid == null) {
+            // Mungkin muncul pilihan sumber foto dulu (Galeri / Kamera).
+            if (tapByLabels(FbLabels.GALLERY_OPTION, 1_500L, MatchMode.EXACT)) {
+                grid = waitFor(6_000L, 500L) { roots -> thumbnails(roots).takeIf { it.size >= 3 } }
+            }
+        }
         if (grid == null) {
             Log.d(TAG, "Grid foto tidak terdeteksi. Layar: ${describeScreen()}")
-            return PhotoPickResult.NEED_USER
+            return 0
         }
         val gridKeys = grid.map { NodeFinder.bounds(it).flattenToString() }.toSet()
-        fun pickerClosed(roots: List<AccessibilityNodeInfo>): Boolean {
+        fun closed(roots: List<AccessibilityNodeInfo>): Boolean {
             val still = thumbnails(roots).count { NodeFinder.bounds(it).flattenToString() in gridKeys }
             return still < gridKeys.size / 2
         }
 
-        // Foto produk diekspor paling baru, jadi berada paling depan (setelah tombol kamera bila ada).
-        val picks = grid.filterNot { NodeFinder.matches(it, FbLabels.CAMERA, MatchMode.CONTAINS) }.take(count)
-        for ((i, item) in picks.withIndex()) {
+        val photos = grid.filterNot { NodeFinder.matches(it, FbLabels.CAMERA, MatchMode.CONTAINS) }
+        val targets = photos.drop(skip).take(want)
+        if (targets.isEmpty()) {
+            Log.d(TAG, "Tidak ada foto tersisa di galeri untuk dipilih")
+            goBack()
+            return 0
+        }
+        var tapped = 0
+        for (item in targets) {
             val b = NodeFinder.bounds(item)
             tapAt(b.exactCenterX(), b.exactCenterY())
-            delay(600L)
-            // Mode pilih-satu: pemilih langsung tertutup setelah foto pertama.
-            if (i == 0 && pickerClosed(roots())) {
-                if (count > 1) lastNote = "Hanya 1 foto terpilih (galeri mode pilih-satu)."
-                return PhotoPickResult.DONE
+            tapped++
+            delay(700L)
+            // Mode pilih-satu: galeri langsung tertutup setelah satu foto.
+            if (closed(roots())) {
+                Log.d(TAG, "Galeri tertutup setelah $tapped foto")
+                return tapped
             }
         }
         delay(stepDelay)
-        if (pickerClosed(roots())) return PhotoPickResult.DONE
+        if (closed(roots())) return tapped
 
         val done = waitFor(4_000L) { roots ->
             val pickerRoots = roots.filter { it.packageName?.toString() != packageName }
@@ -542,14 +581,14 @@ class MarketAutomationService : AccessibilityService() {
         }
         if (done == null) {
             Log.d(TAG, "Tombol Selesai di galeri tidak ketemu. Layar: ${describeScreen()}")
-            return PhotoPickResult.NEED_USER
+            return 0
         }
         clickNode(done)
-        return if (waitFor(10_000L, 500L) { if (pickerClosed(it)) true else null } != null) {
-            PhotoPickResult.DONE
+        return if (waitFor(10_000L, 500L) { if (closed(it)) true else null } != null) {
+            tapped
         } else {
             Log.d(TAG, "Galeri tidak tertutup. Layar: ${describeScreen()}")
-            PhotoPickResult.NEED_USER
+            0
         }
     }
 

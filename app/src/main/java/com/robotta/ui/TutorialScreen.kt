@@ -31,7 +31,9 @@ private val STEPS = listOf(
     ),
     TutorialStep(
         "Login Facebook di aplikasinya",
-        "Asisten memakai akun yang sedang login di aplikasi Facebook. Pakai bahasa Indonesia atau Inggris."
+        "Asisten memakai akun yang sedang login di aplikasi Facebook (bukan Facebook Lite). Pakai bahasa " +
+            "Indonesia atau Inggris. Beri Facebook izin foto \"Izinkan semua\" (Setelan HP → Aplikasi → Facebook → " +
+            "Izin → Foto dan video) agar foto produk dari asisten terlihat di galerinya."
     ),
     TutorialStep(
         "Isi Kelola Akun",
