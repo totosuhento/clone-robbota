@@ -77,17 +77,6 @@
     return true;
   }
 
-  /** Set nilai input/textarea yang dikendalikan React. */
-  function setValue(el, value) {
-    el.focus();
-    var proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-    var setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
-    setter.call(el, value);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    return norm(el.value) === norm(value);
-  }
-
   function optionNodes() {
     var sel = '[role=option],[role=menuitem],[role=menuitemradio],[role=radio],[role=listbox] [role=button],[role=dialog] [role=button],[role=listbox] div[tabindex]';
     return Array.prototype.slice.call(document.querySelectorAll(sel)).filter(visible);
@@ -125,6 +114,168 @@
     return m ? parseInt(m[2], 10) : null;
   }
 
+  /**
+   * Ketik nilai seperti keyboard asli (execCommand insertText), supaya kolom
+   * berformat seperti Harga ("Rp 29.000") menerima angka dengan benar.
+   * Cadangan: setter nilai React.
+   */
+  function typeInto(el, value) {
+    value = String(value);
+    try { el.scrollIntoView({ block: 'center' }); } catch (e) {}
+    el.focus();
+    try { el.select(); } catch (e) {}
+    try { document.execCommand('selectAll', false, null); } catch (e) {}
+    var ok = false;
+    try { ok = document.execCommand('insertText', false, value); } catch (e) { ok = false; }
+    if (!ok || !matches(el.value, value)) {
+      var proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    return matches(el.value, value);
+  }
+
+  /** Sama bila teksnya sama, atau (untuk angka) digitnya sama: "Rp29.000" == "29000". */
+  function matches(actual, wanted) {
+    if (norm(actual) === norm(wanted)) return true;
+    var a = String(actual || '').replace(/\D/g, ''), w = String(wanted || '').replace(/\D/g, '');
+    return /^\d+$/.test(String(wanted).trim()) && a === w;
+  }
+  // nama lama tetap dipakai oleh fungsi lain
+  function setValue(el, value) { return typeInto(el, value); }
+
+  // ------------------------------------------------------------------ pemilih opsi pintar
+
+  function canon(s) {
+    return norm(s).replace(/&/g, ' dan ').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  /** Skor kemiripan 0..1 antara teks opsi dan teks yang dicari. */
+  function similarity(option, wanted) {
+    var o = canon(option), w = canon(wanted);
+    if (!o || !w) return 0;
+    if (o === w) return 1;
+    if (o.indexOf(w) === 0 || w.indexOf(o) === 0) return 0.9;
+    if (o.indexOf(w) >= 0 || w.indexOf(o) >= 0) return 0.8;
+    var ot = o.split(' ').filter(function (t) { return t.length > 2 && t !== 'dan'; });
+    var wt = w.split(' ').filter(function (t) { return t.length > 2 && t !== 'dan'; });
+    if (!ot.length || !wt.length) return 0;
+    var hit = wt.filter(function (t) {
+      return ot.some(function (x) { return x === t || x.indexOf(t) === 0 || t.indexOf(x) === 0; });
+    }).length;
+    return 0.7 * hit / Math.max(wt.length, ot.length);
+  }
+
+  /** Elemen teks yang benar-benar tampil paling atas (tidak tertutup lapisan lain). */
+  function topmostTextItems(minTop) {
+    var out = [], seen = {};
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var node;
+    while ((node = walker.nextNode())) {
+      var t = (node.nodeValue || '').replace(/\s+/g, ' ').trim();
+      if (t.length < 2 || t.length > 50) continue;
+      var el = node.parentElement;
+      if (!el || !visible(el)) continue;
+      var r = el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight || r.top < (minTop || 0)) continue;
+      var cx = r.left + Math.min(r.width / 2, 20), cy = r.top + r.height / 2;
+      var hit = document.elementFromPoint(cx, cy);
+      if (!hit || !(hit === el || el.contains(hit) || hit.contains(el))) continue;
+      var key = t + '|' + Math.round(r.top);
+      if (seen[key]) continue;
+      seen[key] = 1;
+      out.push({ text: t, el: el });
+    }
+    return out;
+  }
+
+  function clickableOf(el) {
+    return el.closest('[role=option],[role=menuitem],[role=menuitemradio],[role=radio],[role=button],[tabindex]') || el;
+  }
+
+  function scrollableAncestor(el) {
+    var p = el;
+    while (p && p !== document.body) {
+      var st = getComputedStyle(p);
+      if ((st.overflowY === 'auto' || st.overflowY === 'scroll') && p.scrollHeight > p.clientHeight + 10) return p;
+      p = p.parentElement;
+    }
+    return null;
+  }
+
+  /**
+   * Buka dropdown berlabel [labels], (opsional) ketik di kolom cari, lalu pilih opsi paling mirip.
+   * Bila [learn], semua teks opsi yang terlihat dikumpulkan untuk aplikasi (daftar kategori FB).
+   */
+  async function smartPick(name, labels, wanted, opts) {
+    opts = opts || {};
+    wanted = (wanted || []).filter(function (w) { return w && String(w).trim(); });
+    if (!wanted.length) { step(name, true, 'kosong, dilewati'); return true; }
+    var box = await waitFor(function () {
+      return findByName('[role=combobox],label[aria-haspopup],div[aria-haspopup],[aria-haspopup=listbox]', labels) ||
+        findByName('label,div[role=button]', labels);
+    }, 6000);
+    if (!box) { step(name, false, 'dropdown tidak ditemukan'); return false; }
+    if (wanted.some(function (w) { return similarity(box.innerText.replace(new RegExp(labels[0], 'i'), ''), w) >= 0.9; })) {
+      step(name, true, 'sudah terisi'); return true;
+    }
+    var boxBottom = box.getBoundingClientRect().top;
+    realClick(box);
+    await sleep(1000);
+
+    var search = Array.prototype.slice.call(document.querySelectorAll('input')).filter(visible)
+      .filter(function (i) { return i !== box && !box.contains(i) && /search|cari/i.test((i.getAttribute('aria-label') || '') + (i.placeholder || '') + (i.type || '')); })[0];
+    var learned = {};
+    var best = null, bestScore = 0;
+
+    function scan() {
+      topmostTextItems(0).forEach(function (it) {
+        if (search && (it.el === search || it.el.contains(search))) return;
+        if (opts.learn) learned[it.text] = 1;
+        wanted.forEach(function (w) {
+          var s = similarity(it.text, w);
+          if (s > bestScore) { bestScore = s; best = it; }
+        });
+      });
+    }
+
+    if (search && opts.searchText && !opts.learn) {
+      typeInto(search, opts.searchText);
+      await sleep(1500);
+    }
+    scan();
+    // Gulir daftar bila belum ketemu yang persis (atau sedang merekam daftar).
+    var scroller = best ? scrollableAncestor(best.el) : null;
+    if (!scroller) {
+      var items = topmostTextItems(boxBottom);
+      if (items.length) scroller = scrollableAncestor(items[items.length - 1].el);
+    }
+    for (var i = 0; i < (opts.learn ? 25 : 12) && (bestScore < 1 || opts.learn); i++) {
+      if (!scroller) break;
+      var before = scroller.scrollTop;
+      scroller.scrollTop = before + scroller.clientHeight * 0.8;
+      await sleep(450);
+      if (scroller.scrollTop === before) break;
+      scan();
+    }
+    if (opts.learn) {
+      try { B.categories(JSON.stringify(Object.keys(learned))); } catch (e) {}
+    }
+    if (!best || bestScore < (opts.minScore || 0.45)) {
+      step(name, false, '"' + wanted[0] + '" tidak ada di pilihan Facebook');
+      try { document.activeElement && document.activeElement.blur(); } catch (e) {}
+      try { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (e) {}
+      return false;
+    }
+    try { best.el.scrollIntoView({ block: 'center' }); } catch (e) {}
+    await sleep(300);
+    realClick(clickableOf(best.el));
+    await sleep(900);
+    step(name, true, best.text + (bestScore < 1 ? ' (paling mirip)' : ''));
+    return true;
+  }
+
   // ------------------------------------------------------------------ langkah
 
   async function addPhotos() {
@@ -149,7 +300,6 @@
       dt.items.add(new File([arr], 'foto_' + (i + 1) + '.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
     }
     if (!input.multiple && dt.files.length > 1) {
-      // Kolom hanya menerima satu file sekaligus: kirim satu per satu.
       for (var k = 0; k < dt.files.length; k++) {
         var one = new DataTransfer();
         one.items.add(dt.files[k]);
@@ -173,54 +323,51 @@
 
   async function fillText(name, labels, value, selector) {
     if (!value) { step(name, true, 'kosong, dilewati'); return true; }
-    var el = await waitFor(function () { return findByName(selector || 'input,textarea', labels); }, 6000);
+    var el = await waitFor(function () { return findByName(selector || 'input,textarea', labels); }, 8000);
     if (!el) { step(name, false, 'kolom tidak ditemukan'); return false; }
-    var ok = setValue(el, value);
-    step(name, ok, ok ? '' : 'nilai tidak tersimpan');
+    var ok = typeInto(el, value);
+    if (!ok) { await sleep(400); ok = typeInto(el, value); }
+    step(name, ok, ok ? '' : 'nilai tidak tersimpan (terisi: ' + (el.value || '').slice(0, 20) + ')');
     return ok;
-  }
-
-  async function pickDropdown(name, labels, wanted, searchText) {
-    if (!wanted || !wanted.length || !wanted[0]) { step(name, true, 'kosong, dilewati'); return true; }
-    var box = await waitFor(function () {
-      return findByName('[role=combobox],label[aria-haspopup],div[aria-haspopup],[aria-haspopup=listbox]', labels) ||
-        findByName('label,div[role=button]', labels);
-    }, 6000);
-    if (!box) { step(name, false, 'dropdown tidak ditemukan'); return false; }
-    if (wanted.some(function (w) { return norm(box.innerText).indexOf(norm(w)) >= 0; })) {
-      step(name, true, 'sudah terisi'); return true;
-    }
-    realClick(box);
-    await sleep(900);
-    // Sebagian dropdown punya kolom pencarian.
-    var search = Array.prototype.slice.call(document.querySelectorAll('[role=dialog] input,[role=listbox] input,input[type=search]'))
-      .filter(visible)[0];
-    if (search && searchText) { setValue(search, searchText); await sleep(1200); }
-    var opt = await waitFor(function () { return findOption(wanted); }, 5000);
-    if (!opt) {
-      step(name, false, '"' + wanted[0] + '" tidak ada di pilihan');
-      try { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (e) {}
-      return false;
-    }
-    realClick(opt);
-    await sleep(700);
-    step(name, true, norm(opt.innerText).slice(0, 40));
-    return true;
   }
 
   async function fillLocation(location) {
     if (!location) { step('Lokasi', true, 'kosong, dilewati'); return true; }
     var city = location.split(',')[0].trim();
-    var el = await waitFor(function () { return findByName('input', ['Lokasi', 'Location']); }, 5000);
+    var el = await waitFor(function () { return findByName('input', ['Lokasi', 'Location']); }, 6000);
     if (!el) { step('Lokasi', false, 'kolom lokasi tidak ditemukan'); return false; }
     if (norm(el.value).indexOf(norm(city)) >= 0) { step('Lokasi', true, 'sudah ' + city); return true; }
-    setValue(el, city);
-    await sleep(1500);
-    var opt = await waitFor(function () { return findOption([location, city]); }, 6000);
-    if (!opt) { step('Lokasi', false, 'saran "' + city + '" tidak muncul'); return false; }
-    realClick(opt);
-    await sleep(600);
-    step('Lokasi', true, norm(opt.innerText).slice(0, 40));
+    typeInto(el, city);
+    await sleep(1800);
+    var top = el.getBoundingClientRect().bottom - 5;
+    var best = null, score = 0;
+    topmostTextItems(top).forEach(function (it) {
+      [location, city].forEach(function (w) {
+        var s = similarity(it.text, w);
+        if (s > score) { score = s; best = it; }
+      });
+    });
+    if (!best || score < 0.5) { step('Lokasi', false, 'saran "' + city + '" tidak muncul'); return false; }
+    realClick(clickableOf(best.el));
+    await sleep(700);
+    step('Lokasi', true, best.text);
+    return true;
+  }
+
+  /** Kolom "Label produk": ketik tiap label lalu Enter. */
+  async function fillTags(tags) {
+    if (!tags || !tags.length) return true;
+    var el = await waitFor(function () { return findByName('input,textarea', ['Label produk', 'Label', 'Product tags', 'Tags']); }, 2500);
+    if (!el) { step('Label', true, 'kolom label tidak ada, label masuk ke deskripsi'); return true; }
+    for (var i = 0; i < Math.min(tags.length, 20); i++) {
+      typeInto(el, tags[i]);
+      await sleep(250);
+      ['keydown', 'keypress', 'keyup'].forEach(function (t) {
+        el.dispatchEvent(new KeyboardEvent(t, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+      });
+      await sleep(400);
+    }
+    step('Label', true, tags.length + ' label');
     return true;
   }
 
@@ -267,10 +414,19 @@
     results.foto = await addPhotos();
     results.judul = await fillText('Judul', ['Judul', 'Title'], d.title);
     results.harga = await fillText('Harga', ['Harga', 'Price'], String(d.price));
-    results.kategori = await pickDropdown('Kategori', ['Kategori', 'Category'], [d.category, d.categoryMain], d.category);
-    results.kondisi = await pickDropdown('Kondisi', ['Kondisi', 'Condition'], d.conditionLabels, null);
+    // Kategori dulu: Facebook baru menampilkan Kondisi/Deskripsi/Lokasi setelah kategori dipilih.
+    results.kategori = await smartPick('Kategori', ['Kategori', 'Category'], [d.category, d.categoryMain],
+      { searchText: d.category, learn: !!d.learnCategories });
+    if (!results.kategori && d.learnCategories) {
+      // Daftar sudah direkam; coba sekali lagi dengan pencarian.
+      results.kategori = await smartPick('Kategori', ['Kategori', 'Category'], [d.category, d.categoryMain],
+        { searchText: d.category });
+    }
+    await sleep(800);
+    results.kondisi = await smartPick('Kondisi', ['Kondisi', 'Condition'], d.conditionLabels, { minScore: 0.6 });
     results.deskripsi = await fillText('Deskripsi', ['Deskripsi', 'Description'], d.description, 'textarea,input');
     results.lokasi = await fillLocation(d.location);
+    results.label = await fillTags(d.tags || []);
     var failed = Object.keys(results).filter(function (k) { return !results[k]; });
     if (failed.length) log('Kolom terlihat: ' + describeFields());
     if (results.foto && results.judul && results.harga && d.autoNext) await goNext();

@@ -44,6 +44,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import com.robotta.ai.TitleGenerator
 import com.robotta.data.AppDatabase
+import com.robotta.data.FbCategories
 import com.robotta.data.SettingsStore
 import com.robotta.data.entities.Account
 import com.robotta.data.entities.Conditions
@@ -397,6 +398,8 @@ class BrowserPostActivity : ComponentActivity() {
                 .put("conditionLabels", JSONArray(Conditions.facebookLabels(p.condition)))
                 .put("description", buildDescription(p))
                 .put("location", p.location.ifBlank { account.defaultLocation })
+                .put("tags", JSONArray(TitleGenerator.normalizeHashtags(p.hashtags).split(' ').map { it.removePrefix("#") }.filter { it.isNotBlank() }))
+                .put("learnCategories", !FbCategories.hasLearned(this@BrowserPostActivity))
                 .put("autoNext", true)
             webView.evaluateJavascript(fillScript, null)
             webView.evaluateJavascript("window.__asisten && window.__asisten.run($data);", null)
@@ -506,6 +509,19 @@ class BrowserPostActivity : ComponentActivity() {
         fun published() {
             if (!allowed()) return
             runOnUiThread { onPublished() }
+        }
+
+        /** Daftar kategori yang terlihat di dropdown Facebook, untuk disamakan di Data Posting. */
+        @JavascriptInterface
+        fun categories(json: String) {
+            if (!allowed()) return
+            try {
+                val arr = JSONArray(json)
+                FbCategories.saveLearned(this@BrowserPostActivity, List(arr.length()) { arr.getString(it) })
+                runOnUiThread { notes.value = notes.value + "Daftar kategori Facebook direkam ✓" }
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal menyimpan kategori", e)
+            }
         }
 
         @JavascriptInterface

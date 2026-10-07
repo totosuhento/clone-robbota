@@ -253,11 +253,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** "Buat Konten AI": judul + deskripsi + hashtag + saran kategori untuk satu produk. */
-    suspend fun generateContent(name: String, category: String, condition: String, notes: String): AiContent? {
+    suspend fun generateContent(
+        name: String,
+        category: String,
+        condition: String,
+        notes: String,
+        keywords: List<String> = emptyList()
+    ): AiContent? {
         val gen = generator()
         if (!gen.hasApiKey) say("API key Gemini kosong — memakai template offline")
         return try {
-            gen.generateContent(name, category, condition, notes)
+            gen.generateContent(name, category, condition, notes, keywords)
         } catch (e: Exception) {
             Log.e(TAG, "Buat Konten AI gagal", e)
             say(e.message ?: "AI gagal")

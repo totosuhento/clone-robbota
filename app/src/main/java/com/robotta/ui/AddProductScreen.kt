@@ -59,10 +59,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.robotta.ai.TitleGenerator
+import com.robotta.data.FbCategories
 import com.robotta.data.entities.Conditions
 import com.robotta.data.entities.ProductImages
 import com.robotta.image.FrameColors
@@ -71,11 +74,6 @@ import kotlinx.coroutines.launch
 
 private const val MAX_PHOTOS = 10
 
-/** Saran kategori. Tulis persis seperti yang tampil di daftar kategori Facebook di HP-mu. */
-private val CATEGORY_SUGGESTIONS = listOf(
-    "Peralatan Rumah Tangga", "Elektronik", "Ponsel", "Pakaian Wanita", "Pakaian Pria",
-    "Kesehatan & Kecantikan", "Mainan & Game", "Perlengkapan Bayi & Anak", "Perabot", "Peralatan", "Lain-lain"
-)
 
 @Composable
 fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
@@ -98,6 +96,11 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
     var titleOptions by remember { mutableStateOf<List<String>>(emptyList()) }
     var categoryOptions by remember { mutableStateOf<List<String>>(emptyList()) }
     var showRegionPicker by remember { mutableStateOf(false) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
+    var keywords by remember { mutableStateOf<List<String>>(emptyList()) }
+    var pickedKeywords by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val context = LocalContext.current
+    val fbEntries = remember { FbCategories.entries(context) }
     var showErrors by remember { mutableStateOf(false) }
 
     val photos = ProductImages.decode(photosJson)
@@ -305,20 +308,21 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                     onClick = {
                         scope.launch {
                             busy = "Menggenerate konten AI…"
-                            vm.generateContent(title, category, condition, description)?.let { c ->
+                            vm.generateContent(title, category, condition, description, pickedKeywords.toList())?.let { c ->
                                 titleOptions = c.titles
                                 if (c.description.isNotBlank()) description = c.description
                                 if (c.hashtags.isNotBlank()) hashtags = c.hashtags
-                                categoryOptions = c.categories
-                                if (category.isBlank()) c.categories.firstOrNull()?.let { category = it }
+                                // Saran AI dicocokkan ke nama kategori Facebook yang sebenarnya.
+                                categoryOptions = c.categories.mapNotNull { closestFbCategory(fbEntries, it) }.distinct()
+                                if (category.isBlank()) categoryOptions.firstOrNull()?.let { category = it }
                             }
                             busy = null
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Buat Konten AI") }
+                ) { Text(if (pickedKeywords.isEmpty()) "Buat Konten AI" else "Buat Konten AI + ${pickedKeywords.size} keyword") }
                 Text(
-                    "Isi nama produk dulu. AI membuat pilihan judul, deskripsi, hashtag & saran kategori — periksa sebelum disimpan.",
+                    "Isi nama produk dulu. AI membuat pilihan judul, deskripsi, label & saran kategori — periksa sebelum disimpan.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -329,6 +333,49 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                             title = option.take(100)
                             titleOptions = emptyList()
                         }, label = { Text(option) })
+                    }
+                }
+                // ---------------- Keyword aktual
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    enabled = busy == null && title.isNotBlank(),
+                    onClick = {
+                        scope.launch {
+                            busy = "Mencari keyword aktual…"
+                            val seed = title.split(' ').filter { it.length > 1 }.take(3).joinToString(" ")
+                            keywords = vm.researchKeywords(seed, false) { _, _ -> }.map { it.text }.take(20)
+                            pickedKeywords = emptySet()
+                            busy = null
+                        }
+                    }
+                ) { Text("Cari keyword aktual") }
+                if (keywords.isNotEmpty()) {
+                    Text("Ketuk keyword untuk memilih (dari pencarian Google & AI):", style = MaterialTheme.typography.labelMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        keywords.forEach { k ->
+                            FilterChip(
+                                selected = k in pickedKeywords,
+                                onClick = { pickedKeywords = if (k in pickedKeywords) pickedKeywords - k else pickedKeywords + k },
+                                label = { Text(k) }
+                            )
+                        }
+                    }
+                    if (pickedKeywords.isNotEmpty()) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilledTonalButton(onClick = {
+                                val extra = pickedKeywords.flatMap { it.split(' ') }
+                                    .filter { w -> w.length > 1 && !title.contains(w, ignoreCase = true) }
+                                    .distinct()
+                                title = (title.trim() + " " + extra.joinToString(" ")).trim().take(100)
+                            }) { Text("+ Judul") }
+                            FilledTonalButton(onClick = {
+                                val line = "Kata kunci: " + pickedKeywords.joinToString(", ")
+                                description = if (description.isBlank()) line else description.trimEnd() + "\n\n" + line
+                            }) { Text("+ Deskripsi") }
+                            FilledTonalButton(onClick = {
+                                hashtags = TitleGenerator.normalizeHashtags(hashtags + "," + pickedKeywords.joinToString(","))
+                            }) { Text("+ Label") }
+                        }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -349,10 +396,20 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                 OutlinedTextField(
                     value = category,
                     onValueChange = { category = it },
-                    label = { Text("Kategori (sesuai teks di Facebook)") },
+                    label = { Text("Kategori Facebook") },
+                    placeholder = { Text("Ketuk \"Pilih kategori\"") },
                     singleLine = true,
+                    isError = category.isNotBlank() && closestFbCategory(fbEntries, category) == null,
+                    supportingText = {
+                        if (category.isNotBlank() && fbEntries.none { !it.isGroup && it.name.equals(category, true) }) {
+                            Text("Belum persis sama dengan daftar Facebook — pilih dari daftar.")
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
+                Button(onClick = { showCategoryPicker = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Pilih kategori (daftar Facebook)")
+                }
                 Spacer(Modifier.height(6.dp))
                 if (categoryOptions.isNotEmpty()) {
                     Text("Saran AI:", style = MaterialTheme.typography.labelMedium)
@@ -360,11 +417,6 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                         categoryOptions.forEach { c ->
                             FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c) })
                         }
-                    }
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CATEGORY_SUGGESTIONS.forEach { c ->
-                        SuggestionChip(onClick = { category = c }, label = { Text(c) })
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -399,9 +451,9 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                 OutlinedTextField(
                     value = hashtags,
                     onValueChange = { hashtags = it },
-                    label = { Text("Hashtag") },
-                    placeholder = { Text("#ikatpinggang #sabukkulit") },
-                    supportingText = { Text("Ditambahkan di akhir deskripsi. Ambil ide dari Riset Kata Kunci.") },
+                    label = { Text("Label / hashtag") },
+                    placeholder = { Text("#propolis #madu") },
+                    supportingText = { Text("Diisi ke kolom Label produk Facebook & di akhir deskripsi.") },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -430,6 +482,17 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
                 fontWeight = FontWeight.Normal
             )
         }
+    }
+
+    if (showCategoryPicker) {
+        CategoryPickerDialog(
+            current = category,
+            onDismiss = { showCategoryPicker = false },
+            onPick = {
+                category = it
+                showCategoryPicker = false
+            }
+        )
     }
 
     if (showRegionPicker) {

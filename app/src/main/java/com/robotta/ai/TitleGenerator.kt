@@ -65,14 +65,29 @@ class TitleGenerator(
      * "Buat Konten AI": judul, deskripsi, hashtag, dan saran kategori sekaligus.
      * Satu konten untuk SATU produk — bukan variasi untuk memasang produk yang sama berulang kali.
      */
-    suspend fun generateContent(productName: String, category: String, condition: String, notes: String): AiContent {
-        if (!hasApiKey) return offlineContent(productName, category, condition, notes)
+    suspend fun generateContent(
+        productName: String,
+        category: String,
+        condition: String,
+        notes: String,
+        keywords: List<String> = emptyList()
+    ): AiContent {
+        if (!hasApiKey) {
+            val base = offlineContent(productName, category, condition, notes)
+            return if (keywords.isEmpty()) base else base.copy(
+                hashtags = normalizeHashtags(base.hashtags + "," + keywords.joinToString(",")),
+                description = base.description + "\n\nKata kunci: " + keywords.joinToString(", ")
+            )
+        }
+        val kw = if (keywords.isEmpty()) "" else
+            "\nKata kunci aktual yang sedang dicari pembeli (pakai secara alami di judul, deskripsi & hashtag bila relevan): " +
+                keywords.joinToString(", ")
         val prompt = """
             Kamu membantu penjual menulis SATU tawaran Facebook Marketplace dalam Bahasa Indonesia.
             Produk: $productName
             Kategori saat ini: ${category.ifBlank { "-" }}
             Kondisi: ${condition.ifBlank { "-" }}
-            Catatan penjual: ${notes.ifBlank { "-" }}
+            Catatan penjual: ${notes.ifBlank { "-" }}$kw
 
             Balas HANYA JSON dengan bentuk:
             {"judul": [3 pilihan judul, maks 80 karakter, jujur, berisi kata kunci yang dicari pembeli, tanpa emoji],
