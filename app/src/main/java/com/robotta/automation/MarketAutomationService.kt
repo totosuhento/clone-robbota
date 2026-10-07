@@ -17,6 +17,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import com.robotta.data.SettingsStore
+import com.robotta.image.GalleryExporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -535,10 +536,79 @@ class MarketAutomationService : AccessibilityService() {
             .sortedWith(compareBy({ NodeFinder.bounds(it).top }, { NodeFinder.bounds(it).left }))
     }
 
+    /** Angka "Foto: n/10" di form Tawaran baru (null jika tidak terlihat). */
+    fun formPhotoCount(roots: List<AccessibilityNodeInfo> = roots()): Int? {
+        val regex = Regex("(?i)(foto|photos?)\\s*:\\s*(\\d+)\\s*/\\s*\\d+")
+        roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }.forEach { r ->
+            NodeFinder.findAll(r) { it.isVisibleToUser && NodeFinder.texts(it).isNotEmpty() }.forEach { n ->
+                NodeFinder.texts(n).forEach { t ->
+                    regex.find(t)?.let { m -> return m.groupValues[2].toIntOrNull() }
+                }
+            }
+        }
+        return null
+    }
+
+    /** Judul album di bagian atas galeri Facebook ("Galeri ▼"). */
+    private fun albumHeader(roots: List<AccessibilityNodeInfo> = roots()): AccessibilityNodeInfo? {
+        val maxBottom = (screenH * 0.14f).toInt()
+        val names = FbLabels.ALBUM_TITLES + GalleryExporter.FOLDER
+        return roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }.flatMap { r ->
+            NodeFinder.findAll(r) { n ->
+                n.isVisibleToUser && NodeFinder.bounds(n).bottom <= maxBottom &&
+                    NodeFinder.matches(n, names, MatchMode.STARTS_WITH)
+            }
+        }.minByOrNull { NodeFinder.area(it) }
+    }
+
+    private fun pickerShowing(roots: List<AccessibilityNodeInfo> = roots()): Boolean =
+        albumHeader(roots) != null || thumbnails(roots).size >= 3
+
     /**
-     * Memilih [count] foto produk dari galeri. Facebook versi baru meminta "foto utama dulu",
-     * jadi pemilihan bisa berlangsung beberapa putaran: foto 1, lalu "Tambahkan foto" lagi untuk sisanya.
-     * Foto produk sudah diekspor paling baru, jadi berada paling depan di galeri.
+     * Pilih album "MarketAsisten" (hanya berisi foto produk yang disalin asisten),
+     * supaya foto lain seperti screenshot tidak ikut terpilih.
+     */
+    private suspend fun chooseProductAlbum(stepDelay: Long): Boolean {
+        val header = albumHeader() ?: return false
+        if (NodeFinder.matches(header, listOf(GalleryExporter.FOLDER), MatchMode.STARTS_WITH)) return true
+        tapAndVerify(header)
+        delay(stepDelay)
+        repeat(6) {
+            val item = NodeFinder.findByLabels(fbRoots(), listOf(GalleryExporter.FOLDER), MatchMode.EXACT)
+            if (item != null && item.isVisibleToUser) {
+                tapAndVerify(item)
+                delay(stepDelay * 2)
+                trail("Album ${GalleryExporter.FOLDER} dipilih", withScreen = false)
+                return true
+            }
+            if (!scrollForward()) return@repeat
+            delay(600L)
+        }
+        trail("Album ${GalleryExporter.FOLDER} tidak ada di daftar album")
+        // Tutup daftar album dengan memilih album semula.
+        NodeFinder.findByLabels(fbRoots(), FbLabels.ALBUM_TITLES, MatchMode.EXACT)?.let { tapAndVerify(it) }
+        return false
+    }
+
+    /** Titik tengah sel ke-[index] di grid galeri (3 kolom), dari node bila ada, atau dari posisi. */
+    private fun gridCellCenter(index: Int): Pair<Float, Float>? {
+        val cells = thumbnails()
+        if (cells.size > index) {
+            val b = NodeFinder.bounds(cells[index])
+            return b.exactCenterX() to b.exactCenterY()
+        }
+        val header = albumHeader() ?: return null
+        val cell = screenW / 3f
+        val top = cells.firstOrNull()?.let { NodeFinder.bounds(it).top.toFloat() }
+            ?: (NodeFinder.bounds(header).bottom + screenH * 0.02f)
+        val col = index % 3
+        val row = index / 3
+        return (col + 0.5f) * cell to top + (row + 0.5f) * cell
+    }
+
+    /**
+     * Memilih [count] foto produk. Satu foto per putaran:
+     * "Tambahkan foto" -> album MarketAsisten -> ketuk foto ke-n -> (Selesai) -> cek "Foto: n/10" bertambah.
      */
     suspend fun selectPhotos(count: Int, autoPick: Boolean, stepDelay: Long): PhotoPickResult {
         lastNote = null
@@ -546,87 +616,71 @@ class MarketAutomationService : AccessibilityService() {
             tapInFacebook(FbLabels.ADD_PHOTOS, 6_000L)
             return PhotoPickResult.NEED_USER
         }
-        var picked = 0
-        var round = 0
-        while (picked < count && round < 4) {
-            round++
-            val opened = tapInFacebook(FbLabels.ADD_PHOTOS, if (round == 1) 6_000L else 3_000L)
-            if (!opened) {
-                Log.d(TAG, "Tombol tambah foto tidak ketemu (putaran $round). Layar: ${describeScreen()}")
+        val start = waitFor(4_000L) { formPhotoCount(it) } ?: 0
+        val target = start + count
+        var cameraOffset = 0
+        var inProductAlbum = false
+        var attempts = 0
+
+        while (attempts < count + 3) {
+            attempts++
+            val now = formPhotoCount() ?: start
+            if (now >= target) break
+
+            if (!tapInFacebook(FbLabels.ADD_PHOTOS, 5_000L)) {
+                trail("Tombol Tambahkan foto tidak ketemu")
+                break
+            }
+            if (waitFor(6_000L, 400L) { if (pickerShowing(it)) true else null } == null) {
+                trail("Galeri tidak terbuka")
                 break
             }
             delay(stepDelay)
-            val r = pickRound(skip = picked, want = count - picked, stepDelay = stepDelay)
-            if (r <= 0) break
-            picked += r
-            delay(stepDelay)
+            inProductAlbum = chooseProductAlbum(stepDelay)
+            if (!inProductAlbum && now == start) {
+                lastNote = "Album ${GalleryExporter.FOLDER} tidak terlihat di galeri Facebook — cek izin foto Facebook (Izinkan semua)."
+            }
+
+            val index = (now - start) + cameraOffset
+            val point = gridCellCenter(index)
+            if (point == null) {
+                trail("Posisi foto ke-${index + 1} tidak bisa ditentukan")
+                goBack()
+                break
+            }
+            tapAt(point.first, point.second)
+            delay(1_200L)
+
+            // Mode pilih-satu: galeri tertutup sendiri. Mode pilih-banyak: tekan Selesai.
+            if (pickerShowing()) {
+                val done = NodeFinder.findByLabels(fbRoots(), FbLabels.PICKER_DONE, MatchMode.EXACT)
+                    ?: NodeFinder.findByLabels(fbRoots(), FbLabels.PICKER_DONE_PREFIX, MatchMode.STARTS_WITH)
+                if (done != null) tapAndVerify(done)
+            }
+            val after = waitFor(8_000L, 500L) { roots -> formPhotoCount(roots)?.takeIf { it > now } }
+            if (after != null) {
+                trail("Foto ${after - start}/$count ditambahkan", withScreen = false)
+                continue
+            }
+            // Tidak bertambah: mungkin yang terketuk sel kamera. Kembali ke form dan geser satu sel.
+            trail("Foto tidak bertambah setelah ketuk sel ${index + 1}")
+            repeat(2) {
+                if (formPhotoCount() == null) {
+                    goBack()
+                    delay(1_000L)
+                }
+            }
+            if (cameraOffset == 0) cameraOffset = 1 else break
         }
+
+        val added = (formPhotoCount() ?: start) - start
         return when {
-            picked >= count -> PhotoPickResult.DONE
-            picked > 0 -> {
-                lastNote = "Baru $picked dari $count foto yang ditambahkan — tambahkan sisanya bila perlu."
+            added >= count -> PhotoPickResult.DONE
+            added > 0 -> {
+                lastNote = "Baru $added dari $count foto yang masuk — tambahkan sisanya bila perlu."
                 PhotoPickResult.DONE
             }
             else -> PhotoPickResult.NEED_USER
-        }
-    }
-
-    /** Satu putaran di galeri. Mengembalikan jumlah foto yang berhasil ditambahkan (0 = gagal). */
-    private suspend fun pickRound(skip: Int, want: Int, stepDelay: Long): Int {
-        var grid = waitFor(5_000L, 500L) { roots -> thumbnails(roots).takeIf { it.size >= 3 } }
-        if (grid == null) {
-            // Mungkin muncul pilihan sumber foto dulu (Galeri / Kamera).
-            if (tapByLabels(FbLabels.GALLERY_OPTION, 1_500L, MatchMode.EXACT)) {
-                grid = waitFor(6_000L, 500L) { roots -> thumbnails(roots).takeIf { it.size >= 3 } }
-            }
-        }
-        if (grid == null) {
-            Log.d(TAG, "Grid foto tidak terdeteksi. Layar: ${describeScreen()}")
-            return 0
-        }
-        val gridKeys = grid.map { NodeFinder.bounds(it).flattenToString() }.toSet()
-        fun closed(roots: List<AccessibilityNodeInfo>): Boolean {
-            val still = thumbnails(roots).count { NodeFinder.bounds(it).flattenToString() in gridKeys }
-            return still < gridKeys.size / 2
-        }
-
-        val photos = grid.filterNot { NodeFinder.matches(it, FbLabels.CAMERA, MatchMode.CONTAINS) }
-        val targets = photos.drop(skip).take(want)
-        if (targets.isEmpty()) {
-            Log.d(TAG, "Tidak ada foto tersisa di galeri untuk dipilih")
-            goBack()
-            return 0
-        }
-        var tapped = 0
-        for (item in targets) {
-            val b = NodeFinder.bounds(item)
-            tapAt(b.exactCenterX(), b.exactCenterY())
-            tapped++
-            delay(700L)
-            // Mode pilih-satu: galeri langsung tertutup setelah satu foto.
-            if (closed(roots())) {
-                Log.d(TAG, "Galeri tertutup setelah $tapped foto")
-                return tapped
-            }
-        }
-        delay(stepDelay)
-        if (closed(roots())) return tapped
-
-        val done = waitFor(4_000L) { roots ->
-            val pickerRoots = roots.filter { it.packageName?.toString() != packageName }
-            NodeFinder.findByLabels(pickerRoots, FbLabels.PICKER_DONE, MatchMode.EXACT)
-                ?: NodeFinder.findByLabels(pickerRoots, FbLabels.PICKER_DONE_PREFIX, MatchMode.STARTS_WITH)
-        }
-        if (done == null) {
-            Log.d(TAG, "Tombol Selesai di galeri tidak ketemu. Layar: ${describeScreen()}")
-            return 0
-        }
-        clickNode(done)
-        return if (waitFor(10_000L, 500L) { if (closed(it)) true else null } != null) {
-            tapped
-        } else {
-            Log.d(TAG, "Galeri tidak tertutup. Layar: ${describeScreen()}")
-            0
         }
     }
 

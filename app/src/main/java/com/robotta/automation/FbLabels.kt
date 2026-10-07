@@ -43,7 +43,11 @@ object FbLabels {
     val PICKER_DONE_PREFIX = listOf("Tambahkan", "Tambah", "Add", "Selesai", "Done", "Berikutnya", "Next")
     val CAMERA = listOf("Kamera", "Camera", "Ambil foto", "Take photo")
     /** Bila "Tambahkan foto" memunculkan pilihan sumber dulu. */
-    val GALLERY_OPTION = listOf("Pilih dari galeri", "Pilih dari Galeri", "Galeri", "Gallery", "Choose from gallery", "Unggah foto")
+    val GALLERY_OPTION = listOf("Pilih dari galeri", "Choose from gallery", "Unggah foto")
+    /** Nama album di judul galeri Facebook ("Galeri ▼"). Album produk: GalleryExporter.FOLDER. */
+    val ALBUM_TITLES = listOf(
+        "Galeri", "Gallery", "Semua foto", "All photos", "Terbaru", "Recents", "Recent", "Kamera", "Camera Roll"
+    )
 
     val TITLE = listOf("Judul", "Title")
     val PRICE = listOf("Harga", "Price")
