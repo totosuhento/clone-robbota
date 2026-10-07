@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -93,7 +94,13 @@ class BrowserPostActivity : ComponentActivity() {
         fileCallback = null
     }
 
-    enum class Phase { LOADING, LOGIN, READY, FILLING, REVIEW, POSTED, DONE }
+    enum class Phase { LOADING, LOGIN, READY, FILLING, REVIEW, POSTED, DONE, RENEW_SCAN, RENEW_READY, RENEWING }
+
+    /** Mode "Perbarui Postingan": memperbarui tawaran lama di halaman Tawaran Anda. */
+    private var renewMode = false
+    private val renewCount = mutableStateOf(0)
+    private val confirmRenew = mutableStateOf(false)
+    private var renewScanned = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,8 +111,9 @@ class BrowserPostActivity : ComponentActivity() {
             ""
         }
         webView = buildWebView()
+        renewMode = intent.getBooleanExtra(EXTRA_RENEW, false)
         setContent { RobottaTheme { Screen() } }
-        loadQueueAndStart()
+        if (renewMode) startRenewMode() else loadQueueAndStart()
     }
 
     override fun onDestroy() {
@@ -149,19 +157,32 @@ class BrowserPostActivity : ComponentActivity() {
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    if (phase.value == Phase.FILLING || phase.value == Phase.LOADING) {
+                    if (phase.value in setOf(Phase.FILLING, Phase.LOADING, Phase.RENEW_SCAN, Phase.RENEWING)) {
                         LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         when (phase.value) {
-                            Phase.LOGIN -> Button(onClick = ::openCurrentForm) { Text("Sudah login, mulai") }
+                            Phase.LOGIN -> Button(onClick = { if (renewMode) startRenewMode() else openCurrentForm() }) {
+                                Text("Sudah login, mulai")
+                            }
                             Phase.READY -> Button(onClick = ::openCurrentForm) { Text("Isi produk ini") }
                             Phase.REVIEW -> OutlinedButton(onClick = ::fillAgain) { Text("Isi ulang") }
                             Phase.POSTED -> Button(onClick = ::nextProduct) { Text("Berikutnya sekarang") }
                             Phase.DONE -> Button(onClick = ::finish) { Text("Tutup") }
+                            Phase.RENEW_READY -> {
+                                if (renewCount.value > 0) {
+                                    Button(onClick = { confirmRenew.value = true }) {
+                                        Text("Perbarui semua (${minOf(renewCount.value, MAX_RENEW)})")
+                                    }
+                                }
+                                OutlinedButton(onClick = ::scanRenewAgain) { Text("Pindai ulang") }
+                            }
                             else -> Unit
                         }
-                        if (phase.value != Phase.DONE && queue.isNotEmpty()) {
+                        if (renewMode && phase.value != Phase.DONE) {
+                            TextButton(onClick = ::finish) { Text("Tutup") }
+                        }
+                        if (!renewMode && phase.value != Phase.DONE && queue.isNotEmpty()) {
                             TextButton(onClick = ::skipProduct) { Text("Lewati") }
                             TextButton(onClick = ::finishSession) { Text("Selesai") }
                         }
@@ -169,6 +190,26 @@ class BrowserPostActivity : ComponentActivity() {
                 }
             }
             AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
+        }
+        if (confirmRenew.value) {
+            val n = minOf(renewCount.value, MAX_RENEW)
+            AlertDialog(
+                onDismissRequest = { confirmRenew.value = false },
+                title = { Text("Perbarui $n tawaran?") },
+                text = {
+                    Text(
+                        "Bot akan menekan \"Perbarui\" pada $n tawaranmu yang sudah bisa diperbarui, satu per satu " +
+                            "dengan jeda. Ini fitur bawaan Facebook untuk menaikkan kembali tawaran lama."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmRenew.value = false
+                        runRenew(n)
+                    }) { Text("Perbarui") }
+                },
+                dismissButton = { TextButton(onClick = { confirmRenew.value = false }) { Text("Batal") } }
+            )
         }
     }
 
@@ -247,6 +288,12 @@ class BrowserPostActivity : ComponentActivity() {
                 phase.value = Phase.LOGIN
                 status.value = "Login ke Facebook dulu (sekali saja). Setelah masuk, tekan \"Sudah login, mulai\"."
             }
+            renewMode && path.startsWith("/marketplace/you") -> {
+                if (!renewScanned && (phase.value == Phase.LOADING || phase.value == Phase.LOGIN)) {
+                    renewScanned = true
+                    scanRenew()
+                }
+            }
             path.startsWith("/marketplace/create/item") -> {
                 val canStart = phase.value == Phase.LOADING || phase.value == Phase.READY || phase.value == Phase.LOGIN
                 if (canStart && lastFilledUrl != url && current() != null) {
@@ -255,6 +302,37 @@ class BrowserPostActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // ---------------------------------------------------------------- perbarui postingan
+
+    private fun startRenewMode() {
+        progress.value = "Perbarui Postingan"
+        phase.value = Phase.LOADING
+        status.value = "Membuka Tawaran Anda…"
+        renewScanned = false
+        webView.loadUrl(SELLING_URL)
+    }
+
+    private fun scanRenew() {
+        lifecycleScope.launch {
+            phase.value = Phase.RENEW_SCAN
+            status.value = "Mencari tawaran yang bisa diperbarui… jangan sentuh layar."
+            delay(3_000L)
+            webView.evaluateJavascript(fillScript, null)
+            webView.evaluateJavascript("window.__asisten && window.__asisten.scanRenew();", null)
+        }
+    }
+
+    private fun scanRenewAgain() {
+        renewScanned = true
+        scanRenew()
+    }
+
+    private fun runRenew(max: Int) {
+        phase.value = Phase.RENEWING
+        status.value = "Memperbarui tawaran… jangan sentuh layar."
+        webView.evaluateJavascript("window.__asisten && window.__asisten.renewAll($max);", null)
     }
 
     // ---------------------------------------------------------------- sesi
@@ -431,6 +509,32 @@ class BrowserPostActivity : ComponentActivity() {
         }
 
         @JavascriptInterface
+        fun renewFound(count: Int) {
+            runOnUiThread {
+                renewCount.value = count
+                phase.value = Phase.RENEW_READY
+                status.value = if (count > 0) {
+                    "Ditemukan $count tawaran yang bisa diperbarui."
+                } else {
+                    "Belum ada tawaran yang bisa diperbarui (Facebook mengizinkan perbarui setelah beberapa hari)."
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun renewProgress(done: Int) {
+            runOnUiThread { status.value = "Memperbarui… $done tawaran selesai." }
+        }
+
+        @JavascriptInterface
+        fun renewFinished(done: Int) {
+            runOnUiThread {
+                phase.value = Phase.DONE
+                status.value = "Selesai: $done tawaran diperbarui ✓"
+            }
+        }
+
+        @JavascriptInterface
         fun photoCount(): Int = if (allowed()) currentPhotos.size else 0
 
         /** Foto ke-i sebagai base64 JPEG (hanya untuk halaman facebook.com). */
@@ -450,13 +554,16 @@ class BrowserPostActivity : ComponentActivity() {
     companion object {
         private const val TAG = "BrowserPost"
         const val CREATE_URL = "https://www.facebook.com/marketplace/create/item"
+        const val SELLING_URL = "https://www.facebook.com/marketplace/you/selling"
+        const val EXTRA_RENEW = "renew"
+        const val MAX_RENEW = 50
         private const val DESKTOP_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/128.0.0.0 Safari/537.36"
 
-        fun start(activity: android.content.Context) {
+        fun start(activity: android.content.Context, renew: Boolean = false) {
             try {
-                activity.startActivity(Intent(activity, BrowserPostActivity::class.java))
+                activity.startActivity(Intent(activity, BrowserPostActivity::class.java).putExtra(EXTRA_RENEW, renew))
             } catch (e: Exception) {
                 Toast.makeText(activity, "Mode Browser tidak bisa dibuka: ${e.message}", Toast.LENGTH_LONG).show()
             }

@@ -52,6 +52,8 @@ import com.robotta.ui.DashboardScreen
 import com.robotta.ui.KeywordScreen
 import com.robotta.ui.LocationScreen
 import com.robotta.ui.MainScreen
+import com.robotta.ui.OptimizeScreen
+import com.robotta.ui.RenewScreen
 import com.robotta.ui.ProductListScreen
 import com.robotta.ui.Screen
 import com.robotta.ui.StatusPill
@@ -199,6 +201,8 @@ private fun AppRoot(
                         onGoToProducts = { screen = Screen.DATA_POSTING }
                     )
                     Screen.BROWSER_MODE -> BrowserModeScreen(vm = vm, onGoToProducts = { screen = Screen.DATA_POSTING })
+                    Screen.OPTIMIZE -> OptimizeScreen(vm = vm)
+                    Screen.RENEW -> RenewScreen()
                     Screen.KEYWORDS -> KeywordScreen(vm = vm)
                     Screen.LOCATION -> LocationScreen(vm = vm)
                     Screen.DATA_POSTING -> ProductListScreen(

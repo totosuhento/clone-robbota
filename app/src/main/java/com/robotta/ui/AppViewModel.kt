@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.robotta.ai.AiContent
 import com.robotta.ai.KeywordIdea
 import com.robotta.ai.KeywordResearch
+import com.robotta.ai.ListingOptimizer
+import com.robotta.ai.OptimizeResult
 import com.robotta.ai.TitleGenerator
 import com.robotta.automation.AutomationEngine
 import com.robotta.automation.EngineState
@@ -316,6 +318,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 emptyList()
             }
         }
+
+    suspend fun optimizeListing(product: Product): OptimizeResult =
+        ListingOptimizer.optimize(product, generator())
+
+    fun applyOptimization(product: Product, title: String?, description: String?) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val fresh = productDao.getById(product.id) ?: return@withContext
+                    productDao.update(
+                        fresh.copy(
+                            title = title?.takeIf { it.isNotBlank() } ?: fresh.title,
+                            description = description?.takeIf { it.isNotBlank() } ?: fresh.description
+                        )
+                    )
+                }
+                say("Perbaikan diterapkan")
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal menerapkan optimasi", e)
+                say("Gagal menerapkan: ${e.message}")
+            }
+        }
+    }
 
     fun testAi() {
         viewModelScope.launch {

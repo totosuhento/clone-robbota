@@ -103,7 +103,7 @@ class TitleGenerator(
         }
     }
 
-    private suspend fun callGemini(prompt: String, jsonMode: Boolean = false): String = withContext(Dispatchers.IO) {
+    internal suspend fun callGemini(prompt: String, jsonMode: Boolean = false): String = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) throw IOException("API key Gemini belum diisi di Pengaturan.")
         val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/${model.trim()}:generateContent"
         val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {

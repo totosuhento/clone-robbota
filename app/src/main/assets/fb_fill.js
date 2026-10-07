@@ -277,6 +277,61 @@
     B.finished(JSON.stringify({ form: true, results: results }));
   }
 
-  window.__asisten = { run: run };
+  // ------------------------------------------------------------------ perbarui tawaran
+
+  var RENEW = ['perbarui', 'perbarui tawaran', 'perbarui sekarang', 'renew', 'renew listing'];
+
+  function renewButtons() {
+    return Array.prototype.slice.call(document.querySelectorAll('[role=button],button,a[role=link]')).filter(visible)
+      .filter(function (b) {
+        var t = norm(b.innerText || b.getAttribute('aria-label'));
+        return RENEW.indexOf(t) >= 0 && b.getAttribute('aria-disabled') !== 'true' && !b.__asistenDone;
+      });
+  }
+
+  /** Gulir halaman "Tawaran Anda" untuk memuat lebih banyak, lalu hitung tombol Perbarui. */
+  async function scanRenew() {
+    var last = -1;
+    for (var i = 0; i < 8; i++) {
+      var n = renewButtons().length;
+      if (n === last && i > 2) break;
+      last = n;
+      window.scrollBy(0, window.innerHeight * 0.9);
+      await sleep(1200);
+    }
+    window.scrollTo(0, 0);
+    await sleep(500);
+    var count = renewButtons().length;
+    try { B.renewFound(count); } catch (e) {}
+    return count;
+  }
+
+  /** Tekan "Perbarui" satu per satu (maks [max]), dengan jeda, setelah pengguna mengonfirmasi. */
+  async function renewAll(max) {
+    var done = 0;
+    for (var guard = 0; guard < 200 && done < max; guard++) {
+      var b = renewButtons()[0];
+      if (!b) {
+        window.scrollBy(0, window.innerHeight * 0.9);
+        await sleep(1200);
+        if (!renewButtons()[0]) break;
+        continue;
+      }
+      b.__asistenDone = true;
+      realClick(b);
+      await sleep(1500);
+      // Sebagian versi menampilkan dialog konfirmasi "Perbarui".
+      var confirm = Array.prototype.slice.call(document.querySelectorAll('[role=dialog] [role=button],[role=dialog] button')).filter(visible)
+        .find(function (x) { return RENEW.indexOf(norm(x.innerText || x.getAttribute('aria-label'))) >= 0; });
+      if (confirm) { realClick(confirm); await sleep(1500); }
+      done++;
+      try { B.renewProgress(done); } catch (e) {}
+      await sleep(1500);
+    }
+    try { B.renewFinished(done); } catch (e) {}
+    return done;
+  }
+
+  window.__asisten = { run: run, scanRenew: scanRenew, renewAll: renewAll };
   installPublishWatcher();
 })();

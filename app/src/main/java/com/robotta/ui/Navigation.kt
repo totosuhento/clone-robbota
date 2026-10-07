@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -41,12 +43,14 @@ import com.robotta.BuildConfig
 enum class Screen(val title: String, val icon: ImageVector, val section: String) {
     DASHBOARD("Dashboard", Icons.Filled.Home, ""),
     ACCOUNT("Kelola Akun", Icons.Filled.Person, ""),
-    BROWSER_MODE("Auto Posting (Mode Browser)", Icons.Filled.PlayArrow, "BOT FB MARKETPLACE"),
-    AUTO_POSTING("Auto Posting (Aplikasi FB)", Icons.Filled.PlayArrow, "BOT FB MARKETPLACE"),
+    BROWSER_MODE("Auto Posting FB Marketplace", Icons.Filled.PlayArrow, "BOT FB MARKETPLACE"),
+    OPTIMIZE("Optimasi Postingan FB", Icons.Filled.Star, "BOT FB MARKETPLACE"),
+    RENEW("Perbarui Postingan", Icons.Filled.Refresh, "BOT FB MARKETPLACE"),
     KEYWORDS("Riset Kata Kunci", Icons.Filled.Search, "BOT FB MARKETPLACE"),
     LOCATION("Riset Lokasi", Icons.Filled.LocationOn, "BOT FB MARKETPLACE"),
     DATA_POSTING("Data Posting", Icons.AutoMirrored.Filled.List, "DATA POSTING"),
-    AUTO_FRAME("Auto Frame", Icons.Filled.Build, "DATA POSTING"),
+    AUTO_FRAME("Auto Frame Manual", Icons.Filled.Build, "DATA POSTING"),
+    AUTO_POSTING("Auto Posting (lewat Aplikasi FB)", Icons.Filled.PlayArrow, "LAINNYA"),
     TUTORIAL("Tutorial", Icons.Filled.Info, "BANTUAN"),
     SETTINGS("Pengaturan", Icons.Filled.Settings, "BANTUAN")
 }
