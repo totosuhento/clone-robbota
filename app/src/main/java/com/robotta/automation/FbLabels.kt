@@ -23,7 +23,11 @@ object FbLabels {
     /** Tombol/chip "Jual" di halaman Marketplace. */
     val SELL = listOf("Jual", "Sell")
     /** Di halaman "Jual": tombol membuat tawaran. */
-    val CREATE_LISTING = listOf("Buat tawaran baru", "Create new listing", "Buat tawaran", "Create listing", "Tawarkan barang")
+    val CREATE_LISTING = listOf(
+        "Buat tawaran baru", "Buat Tawaran Baru", "Buat tawaran", "Tawaran baru", "Buat penawaran",
+        "Pasang tawaran", "Jual sesuatu", "Tawarkan barang", "Buat baru",
+        "Create new listing", "Create listing", "New listing", "Sell something"
+    )
     val ITEM_FOR_SALE = listOf("Barang untuk dijual", "Barang dijual", "Barang", "Item for sale", "Items", "Item")
 
     val ADD_PHOTOS = listOf("Tambahkan foto", "Tambah foto", "Tambahkan Foto", "Add photos", "Add photo", "Add Photos")

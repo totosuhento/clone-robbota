@@ -172,8 +172,22 @@ class MarketAutomationService : AccessibilityService() {
     fun isFormVisible(roots: List<AccessibilityNodeInfo> = roots()): Boolean {
         val fbRoots = roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }
         if (fbRoots.isEmpty()) return false
-        return NodeFinder.findEditable(fbRoots, FbLabels.TITLE) != null ||
+        if (NodeFinder.findEditable(fbRoots, FbLabels.TITLE) != null ||
             NodeFinder.findEditable(fbRoots, FbLabels.PRICE) != null
+        ) return true
+        // Sebagian versi menampilkan kolom sebagai baris berlabel yang baru bisa diketik setelah diketuk.
+        val titleRow = NodeFinder.findByLabels(fbRoots, FbLabels.TITLE, MatchMode.EXACT, excludeEditable = false)
+        val priceRow = NodeFinder.findByLabels(fbRoots, FbLabels.PRICE, MatchMode.EXACT, excludeEditable = false)
+        return titleRow != null && priceRow != null
+    }
+
+    /** Jejak navigasi pembukaan form, ditampilkan di log aplikasi saat gagal. */
+    val navTrail = mutableListOf<String>()
+
+    private fun trail(step: String, withScreen: Boolean = true) {
+        val line = if (withScreen) "$step → ${describeScreen(25)}" else step
+        navTrail += line
+        Log.d(TAG, line)
     }
 
     // ---------------------------------------------------------------- aksi dasar
@@ -360,12 +374,13 @@ class MarketAutomationService : AccessibilityService() {
      * Mengembalikan false jika form tidak terlihat; pemanggil lalu meminta pengguna membukanya.
      */
     suspend fun openSellForm(stepDelay: Long): Boolean {
+        navTrail.clear()
         if (launchCreateItemLink()) {
             if (waitFor(10_000L) { formOrPhotoButtonVisible(it) } != null) {
                 Log.d(TAG, "Form terbuka lewat deep link")
                 return true
             }
-            Log.d(TAG, "Deep link tidak membuka form. Layar: ${describeScreen()}")
+            trail("1) Link form")
         }
         // Jalur 2: buka beranda Marketplace lewat link, lalu Jual -> Buat tawaran baru -> Barang.
         if (launchFbUrl(FbLabels.MARKETPLACE_URL)) {
@@ -378,7 +393,7 @@ class MarketAutomationService : AccessibilityService() {
                 Log.d(TAG, "Form terbuka lewat beranda Marketplace")
                 return true
             }
-            Log.d(TAG, "Jalur beranda Marketplace gagal. Layar: ${describeScreen()}")
+            trail("2) Beranda Marketplace")
         }
 
         Log.d(TAG, "Navigasi manual ke form Jual")
@@ -391,19 +406,19 @@ class MarketAutomationService : AccessibilityService() {
         val onSellPage = NodeFinder.findByLabels(fbRoots(), FbLabels.CREATE_LISTING) != null
         if (!onSellPage) {
             if (!navigateToMarketplace()) {
-                Log.d(TAG, "Marketplace tidak ditemukan. Layar: ${describeScreen()}")
+                trail("3) Tab Marketplace tidak ketemu")
                 return false
             }
             delay(stepDelay * 2)
             if (!tapSellButton()) {
-                Log.d(TAG, "Tombol Jual tidak ditemukan. Layar: ${describeScreen()}")
+                trail("3) Tombol Jual tidak ketemu")
                 return false
             }
             delay(stepDelay * 2)
         }
 
         val ok = continueFromSellPage(stepDelay, sellAlreadyTapped = true)
-        if (!ok) Log.d(TAG, "Form tetap tidak terlihat. Layar: ${describeScreen()}")
+        if (!ok) trail("3) Setelah Jual")
         return ok
     }
 
@@ -414,9 +429,15 @@ class MarketAutomationService : AccessibilityService() {
             if (!tapSellButton()) return false
             delay(stepDelay * 2)
         }
-        // Halaman "Jual" -> "Buat tawaran baru" (jika ada).
+        // Halaman "Jual barang" -> "Buat tawaran baru" (jika ada; kadang perlu digulir).
         if (waitFor(2_000L) { formOrPhotoButtonVisible(it) } == null) {
-            tapInFacebook(FbLabels.CREATE_LISTING, 4_000L)
+            var tapped = tapInFacebook(FbLabels.CREATE_LISTING, 4_000L)
+            var scrolls = 0
+            while (!tapped && scrolls < 3 && scrollForward()) {
+                delay(700L)
+                tapped = tapInFacebook(FbLabels.CREATE_LISTING, 1_500L)
+                scrolls++
+            }
             delay(stepDelay * 2)
         }
         // Pilihan jenis tawaran -> "Barang untuk dijual" (jika ada).
@@ -430,12 +451,18 @@ class MarketAutomationService : AccessibilityService() {
     fun describeScreen(maxItems: Int = 20): String = try {
         roots().joinToString(" || ") { root ->
             val texts = NodeFinder.findAll(root) { it.isVisibleToUser && NodeFinder.texts(it).isNotEmpty() }
-                .flatMap { NodeFinder.texts(it) }
-                .map { it.replace('\n', ' ').take(40) }
+                .flatMap { n ->
+                    val mark = when {
+                        NodeFinder.isEditable(n) -> "✎"
+                        NodeFinder.hasClickableAncestor(n, 1) -> "•"
+                        else -> ""
+                    }
+                    NodeFinder.texts(n).map { mark + it.replace('\n', ' ').take(40) }
+                }
                 .distinct()
                 .take(maxItems)
             "[${root.packageName}] " + texts.joinToString(" | ")
-        }.take(900).ifBlank { "(tidak ada jendela terbaca)" }
+        }.take(2500).ifBlank { "(tidak ada jendela terbaca)" }
     } catch (e: Exception) {
         "(gagal membaca layar: ${e.message})"
     }
@@ -549,6 +576,17 @@ class MarketAutomationService : AccessibilityService() {
                 val ok = setText(field, value)
                 Log.d(TAG, "Isi $labels -> ${if (ok) "OK" else "GAGAL"}")
                 return ok
+            }
+            // Baris berlabel yang baru menjadi kolom isian setelah diketuk.
+            val row = NodeFinder.findByLabels(fbRoots(), labels, MatchMode.EXACT, excludeEditable = false)
+            if (row != null && clickNode(row)) {
+                delay(800L)
+                val focused = findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                if (focused != null && NodeFinder.isEditable(focused)) {
+                    val ok = setText(focused, value)
+                    Log.d(TAG, "Isi (lewat baris) $labels -> ${if (ok) "OK" else "GAGAL"}")
+                    return ok
+                }
             }
             if (attempt >= scrollAttempts || !scrollForward()) return false
             attempt++

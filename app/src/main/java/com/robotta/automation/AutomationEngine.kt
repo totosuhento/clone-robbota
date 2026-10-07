@@ -231,7 +231,8 @@ object AutomationEngine {
         working(product, ActionStep.OPEN_FORM)
         if (!service.openSellForm(d)) {
             // Catat isi layar supaya label yang berbeda bisa ditambahkan ke FbLabels.
-            log(product.title, "Layar saat gagal: ${service.describeScreen(12)}", LogLevel.INFO)
+            service.navTrail.forEach { log(product.title, "Jejak: $it", LogLevel.INFO) }
+            log(product.title, "Layar saat gagal: ${service.describeScreen(40)}", LogLevel.INFO)
             needsUser(
                 product,
                 "Form Jual Barang belum bisa dibuka otomatis. Buka sendiri di Facebook: Marketplace → Jual → " +
@@ -256,7 +257,7 @@ object AutomationEngine {
             }
             PhotoPickResult.NEED_USER -> {
                 if (settings.autoPickPhotos) {
-                    log(product.title, "Layar (foto): ${service.describeScreen(12)}", LogLevel.INFO)
+                    log(product.title, "Layar (foto): ${service.describeScreen(30)}", LogLevel.INFO)
                 }
                 val msg = "Pilih $exported foto teratas (folder ${GalleryExporter.FOLDER}), lalu tekan Selesai. " +
                     "Asisten lanjut mengisi form setelah kamu kembali ke form."
@@ -310,7 +311,7 @@ object AutomationEngine {
             } else {
                 warnings += warning
                 log(product.title, warning, LogLevel.WARN)
-                log(product.title, "Layar (${step.label}): ${service.describeScreen(12)}", LogLevel.INFO)
+                log(product.title, "Layar (${step.label}): ${service.describeScreen(30)}", LogLevel.INFO)
                 formOk = service.recoverToForm(d)
                 if (!formOk) warnings += "Form tidak terlihat lagi — lanjutkan pengisian secara manual."
             }
