@@ -14,6 +14,8 @@ object FbLabels {
 
     /** Deep link ke form buat tawaran barang. */
     const val CREATE_ITEM_URL = "https://www.facebook.com/marketplace/create/item"
+    /** Beranda Marketplace (jalur cadangan bila link form langsung tidak dibuka aplikasi). */
+    const val MARKETPLACE_URL = "https://www.facebook.com/marketplace/"
 
     val MARKETPLACE = listOf("Marketplace")
     /** Tombol Menu (☰) — jalur cadangan bila tab Marketplace tidak ada di bilah navigasi. */
@@ -25,7 +27,13 @@ object FbLabels {
     val ITEM_FOR_SALE = listOf("Barang untuk dijual", "Barang dijual", "Barang", "Item for sale", "Items", "Item")
 
     val ADD_PHOTOS = listOf("Tambahkan foto", "Tambah foto", "Tambahkan Foto", "Add photos", "Add photo", "Add Photos")
-    val PICKER_DONE = listOf("Selesai", "Done", "Berikutnya", "Next", "Lanjutkan", "Continue", "Tambahkan", "Add")
+    /** Tombol konfirmasi di galeri foto (dicari persis). */
+    val PICKER_DONE = listOf(
+        "Selesai", "Done", "Berikutnya", "Next", "Lanjut", "Lanjutkan", "Selanjutnya", "Continue",
+        "Tambahkan", "Tambah", "Add", "OK", "Unggah", "Upload"
+    )
+    /** Tombol konfirmasi yang memuat jumlah, mis. "Tambahkan (2)" / "Add 2". */
+    val PICKER_DONE_PREFIX = listOf("Tambahkan", "Tambah", "Add", "Selesai", "Done", "Berikutnya", "Next")
     val CAMERA = listOf("Kamera", "Camera", "Ambil foto", "Take photo")
 
     val TITLE = listOf("Judul", "Title")

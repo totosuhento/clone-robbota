@@ -250,8 +250,14 @@ object AutomationEngine {
         // 3. Foto
         working(product, ActionStep.SELECT_PHOTOS)
         when (service.selectPhotos(exported, settings.autoPickPhotos, d)) {
-            PhotoPickResult.DONE -> log(product.title, "$exported foto dipilih.", LogLevel.INFO)
+            PhotoPickResult.DONE -> {
+                log(product.title, "$exported foto dipilih otomatis.", LogLevel.INFO)
+                service.lastNote?.let { warnings += it }
+            }
             PhotoPickResult.NEED_USER -> {
+                if (settings.autoPickPhotos) {
+                    log(product.title, "Layar (foto): ${service.describeScreen(12)}", LogLevel.INFO)
+                }
                 val msg = "Pilih $exported foto teratas (folder ${GalleryExporter.FOLDER}), lalu tekan Selesai. " +
                     "Asisten lanjut mengisi form setelah kamu kembali ke form."
                 needsUser(product, msg, canRetry = false, autoContinue = true)
@@ -296,9 +302,15 @@ object AutomationEngine {
                 Log.e(TAG, "Langkah ${step.name} error", e)
                 false
             }
-            if (!ok) {
+            if (ok) {
+                service.lastNote?.let {
+                    warnings += it
+                    log(product.title, it, LogLevel.WARN)
+                }
+            } else {
                 warnings += warning
                 log(product.title, warning, LogLevel.WARN)
+                log(product.title, "Layar (${step.label}): ${service.describeScreen(12)}", LogLevel.INFO)
                 formOk = service.recoverToForm(d)
                 if (!formOk) warnings += "Form tidak terlihat lagi — lanjutkan pengisian secara manual."
             }

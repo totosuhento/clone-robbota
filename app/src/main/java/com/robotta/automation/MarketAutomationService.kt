@@ -278,8 +278,10 @@ class MarketAutomationService : AccessibilityService() {
         false
     }
 
-    private fun launchCreateItemLink(): Boolean = try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(FbLabels.CREATE_ITEM_URL))
+    private fun launchCreateItemLink(): Boolean = launchFbUrl(FbLabels.CREATE_ITEM_URL)
+
+    private fun launchFbUrl(url: String): Boolean = try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
             .setPackage(FbLabels.FB_PACKAGE)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (intent.resolveActivity(packageManager) == null) {
@@ -317,8 +319,24 @@ class MarketAutomationService : AccessibilityService() {
         return clickNode(node)
     }
 
+    /** Ikon/tab Marketplace di bilah navigasi (atas atau bawah layar), bukan teks di dalam postingan. */
+    private fun findMarketplaceTab(roots: List<AccessibilityNodeInfo>): AccessibilityNodeInfo? {
+        val h = resources.displayMetrics.heightPixels
+        return roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }
+            .flatMap { r -> NodeFinder.findAll(r) { n -> n.isVisibleToUser && NodeFinder.matches(n, FbLabels.MARKETPLACE, MatchMode.STARTS_WITH) } }
+            .filter { n ->
+                val b = NodeFinder.bounds(n)
+                (b.bottom <= h * 0.25f || b.top >= h * 0.82f) && NodeFinder.hasClickableAncestor(n, 2)
+            }
+            .minByOrNull { NodeFinder.area(it) }
+    }
+
     suspend fun navigateToMarketplace(): Boolean {
-        if (tapInFacebook(FbLabels.MARKETPLACE, 6_000L)) return true
+        val tab = waitFor(6_000L) { findMarketplaceTab(it) }
+        if (tab != null) {
+            Log.d(TAG, "Tap tab: ${NodeFinder.label(tab)}")
+            if (clickNode(tab)) return true
+        }
         // Tab Marketplace tidak ada di bilah navigasi: buka lewat Menu (☰).
         Log.d(TAG, "Tab Marketplace tidak ada, coba lewat Menu")
         if (!tapInFacebook(FbLabels.MENU, 3_000L, MatchMode.EXACT) && !tapInFacebook(FbLabels.MENU, 2_000L)) return false
@@ -349,6 +367,20 @@ class MarketAutomationService : AccessibilityService() {
             }
             Log.d(TAG, "Deep link tidak membuka form. Layar: ${describeScreen()}")
         }
+        // Jalur 2: buka beranda Marketplace lewat link, lalu Jual -> Buat tawaran baru -> Barang.
+        if (launchFbUrl(FbLabels.MARKETPLACE_URL)) {
+            val sellVisible = waitFor(10_000L) { roots ->
+                val fb = roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }
+                NodeFinder.findByLabels(fb, FbLabels.SELL, MatchMode.EXACT)
+                    ?: NodeFinder.findByLabels(fb, FbLabels.CREATE_LISTING)
+            }
+            if (sellVisible != null && continueFromSellPage(stepDelay)) {
+                Log.d(TAG, "Form terbuka lewat beranda Marketplace")
+                return true
+            }
+            Log.d(TAG, "Jalur beranda Marketplace gagal. Layar: ${describeScreen()}")
+        }
+
         Log.d(TAG, "Navigasi manual ke form Jual")
         if (!launchFacebookApp()) return false
         if (waitFor(10_000L) { if (isFacebookForeground()) true else null } == null) return false
@@ -370,18 +402,28 @@ class MarketAutomationService : AccessibilityService() {
             delay(stepDelay * 2)
         }
 
+        val ok = continueFromSellPage(stepDelay, sellAlreadyTapped = true)
+        if (!ok) Log.d(TAG, "Form tetap tidak terlihat. Layar: ${describeScreen()}")
+        return ok
+    }
+
+    /** Dari beranda Marketplace / halaman Jual sampai form Barang untuk dijual terbuka. */
+    private suspend fun continueFromSellPage(stepDelay: Long, sellAlreadyTapped: Boolean = false): Boolean {
+        if (isSellFormShowing()) return true
+        if (!sellAlreadyTapped && NodeFinder.findByLabels(fbRoots(), FbLabels.CREATE_LISTING) == null) {
+            if (!tapSellButton()) return false
+            delay(stepDelay * 2)
+        }
         // Halaman "Jual" -> "Buat tawaran baru" (jika ada).
-        if (waitFor(1_500L) { formOrPhotoButtonVisible(it) } == null) {
+        if (waitFor(2_000L) { formOrPhotoButtonVisible(it) } == null) {
             tapInFacebook(FbLabels.CREATE_LISTING, 4_000L)
             delay(stepDelay * 2)
         }
         // Pilihan jenis tawaran -> "Barang untuk dijual" (jika ada).
-        if (waitFor(1_500L) { formOrPhotoButtonVisible(it) } == null) {
-            tapInFacebook(FbLabels.ITEM_FOR_SALE, 4_000L)
+        if (waitFor(2_000L) { formOrPhotoButtonVisible(it) } == null) {
+            tapInFacebook(FbLabels.ITEM_FOR_SALE, 4_000L, MatchMode.EXACT)
         }
-        val ok = waitFor(10_000L) { formOrPhotoButtonVisible(it) } != null
-        if (!ok) Log.d(TAG, "Form tetap tidak terlihat. Layar: ${describeScreen()}")
-        return ok
+        return waitFor(10_000L) { formOrPhotoButtonVisible(it) } != null
     }
 
     /** Ringkasan teks yang terlihat di layar, untuk log diagnosa. */
@@ -400,55 +442,99 @@ class MarketAutomationService : AccessibilityService() {
 
     // ---------------------------------------------------------------- foto
 
+    private val screenW get() = resources.displayMetrics.widthPixels
+    private val screenH get() = resources.displayMetrics.heightPixels
+
+    /** Catatan dari langkah terakhir (mis. "kategori dipilih otomatis: X"), dibaca AutomationEngine. */
+    @Volatile
+    var lastNote: String? = null
+
+    /**
+     * Thumbnail foto di layar pemilih: node terlihat, hampir persegi, lebar 15–40% layar.
+     * Cara ini tidak bergantung pada teks/ID, jadi tetap jalan walau tampilan galeri berubah.
+     */
+    private fun thumbnails(roots: List<AccessibilityNodeInfo> = roots()): List<AccessibilityNodeInfo> {
+        val minW = (screenW * 0.15f).toInt()
+        val maxW = (screenW * 0.40f).toInt()
+        val minTop = (screenH * 0.06f).toInt()
+        val seen = HashSet<String>()
+        return roots.flatMap { r ->
+            NodeFinder.findAll(r) { n ->
+                if (!n.isVisibleToUser || NodeFinder.isEditable(n)) return@findAll false
+                val b = NodeFinder.bounds(n)
+                val w = b.width()
+                val h = b.height()
+                w in minW..maxW && h > 0 && kotlin.math.abs(w - h) <= w * 0.2f && b.top >= minTop
+            }
+        }.filter { seen.add(NodeFinder.bounds(it).flattenToString()) }
+            .sortedWith(compareBy({ NodeFinder.bounds(it).top }, { NodeFinder.bounds(it).left }))
+    }
+
     suspend fun selectPhotos(count: Int, autoPick: Boolean, stepDelay: Long): PhotoPickResult {
-        val opened = tapByLabels(FbLabels.ADD_PHOTOS, 6_000L, MatchMode.STARTS_WITH)
+        lastNote = null
+        val opened = tapInFacebook(FbLabels.ADD_PHOTOS, 6_000L)
         if (!opened) {
-            Log.d(TAG, "Tombol tambah foto tidak ketemu, minta pengguna")
+            Log.d(TAG, "Tombol tambah foto tidak ketemu. Layar: ${describeScreen()}")
             return PhotoPickResult.NEED_USER
         }
         if (!autoPick) return PhotoPickResult.NEED_USER
-
-        delay(stepDelay * 2)
-        // Pemilih foto terbuka = form tidak lagi terlihat.
-        if (waitFor(6_000L) { if (!isFormVisible(it)) true else null } == null) return PhotoPickResult.NEED_USER
-
-        val grid = waitFor(6_000L) { roots ->
-            roots.flatMap { r -> NodeFinder.findAll(r) { n -> n.isScrollable && n.childCount >= 2 } }
-                .maxByOrNull { NodeFinder.area(it) }
-        } ?: return PhotoPickResult.NEED_USER
-
-        val items = (0 until grid.childCount)
-            .mapNotNull { grid.getChild(it) }
-            .filter { child ->
-                val r = NodeFinder.bounds(child)
-                !r.isEmpty && !NodeFinder.matches(child, FbLabels.CAMERA, MatchMode.CONTAINS)
-            }
-            .sortedWith(compareBy({ NodeFinder.bounds(it).top }, { NodeFinder.bounds(it).left }))
-
-        if (items.size < count) {
-            Log.d(TAG, "Item galeri kurang (${items.size} < $count)")
-            return PhotoPickResult.NEED_USER
-        }
-        for (item in items.take(count)) {
-            if (!clickNode(item, climb = false)) return PhotoPickResult.NEED_USER
-            delay(400L)
-        }
         delay(stepDelay)
 
-        // Pastikan masih di pemilih foto sebelum menekan Selesai (jangan sampai menekan "Berikutnya" di form).
-        if (isFormVisible()) return PhotoPickResult.DONE
-        if (!tapByLabels(FbLabels.PICKER_DONE, 4_000L, MatchMode.EXACT)) return PhotoPickResult.NEED_USER
-        return if (waitFor(10_000L) { if (isFormVisible(it)) true else null } != null) {
+        // Pemilih foto terbuka = muncul grid berisi banyak thumbnail.
+        val need = maxOf(3, count + 1)
+        val grid = waitFor(10_000L, 500L) { roots -> thumbnails(roots).takeIf { it.size >= need } }
+        if (grid == null) {
+            Log.d(TAG, "Grid foto tidak terdeteksi. Layar: ${describeScreen()}")
+            return PhotoPickResult.NEED_USER
+        }
+        val gridKeys = grid.map { NodeFinder.bounds(it).flattenToString() }.toSet()
+        fun pickerClosed(roots: List<AccessibilityNodeInfo>): Boolean {
+            val still = thumbnails(roots).count { NodeFinder.bounds(it).flattenToString() in gridKeys }
+            return still < gridKeys.size / 2
+        }
+
+        // Foto produk diekspor paling baru, jadi berada paling depan (setelah tombol kamera bila ada).
+        val picks = grid.filterNot { NodeFinder.matches(it, FbLabels.CAMERA, MatchMode.CONTAINS) }.take(count)
+        for ((i, item) in picks.withIndex()) {
+            val b = NodeFinder.bounds(item)
+            tapAt(b.exactCenterX(), b.exactCenterY())
+            delay(600L)
+            // Mode pilih-satu: pemilih langsung tertutup setelah foto pertama.
+            if (i == 0 && pickerClosed(roots())) {
+                if (count > 1) lastNote = "Hanya 1 foto terpilih (galeri mode pilih-satu)."
+                return PhotoPickResult.DONE
+            }
+        }
+        delay(stepDelay)
+        if (pickerClosed(roots())) return PhotoPickResult.DONE
+
+        val done = waitFor(4_000L) { roots ->
+            val pickerRoots = roots.filter { it.packageName?.toString() != packageName }
+            NodeFinder.findByLabels(pickerRoots, FbLabels.PICKER_DONE, MatchMode.EXACT)
+                ?: NodeFinder.findByLabels(pickerRoots, FbLabels.PICKER_DONE_PREFIX, MatchMode.STARTS_WITH)
+        }
+        if (done == null) {
+            Log.d(TAG, "Tombol Selesai di galeri tidak ketemu. Layar: ${describeScreen()}")
+            return PhotoPickResult.NEED_USER
+        }
+        clickNode(done)
+        return if (waitFor(10_000L, 500L) { if (pickerClosed(it)) true else null } != null) {
             PhotoPickResult.DONE
-        } else PhotoPickResult.NEED_USER
+        } else {
+            Log.d(TAG, "Galeri tidak tertutup. Layar: ${describeScreen()}")
+            PhotoPickResult.NEED_USER
+        }
     }
 
-    /** Menunggu pengguna memilih foto sendiri: pemilih terbuka, lalu kembali ke form. */
+    /** Menunggu pengguna memilih foto sendiri: grid galeri muncul lalu tertutup lagi. */
     suspend fun waitForUserPhotoSelection(timeoutMs: Long): Boolean {
-        val pickerOpened = waitFor(timeoutMs, 700L) { if (!isFormVisible(it)) true else null } ?: return false
-        Log.d(TAG, "Pemilih foto terbuka ($pickerOpened), menunggu kembali ke form")
-        delay(800L)
-        return waitFor(timeoutMs, 700L) { if (isFormVisible(it)) true else null } != null
+        val grid = waitFor(timeoutMs, 700L) { roots -> thumbnails(roots).takeIf { it.size >= 3 } }
+            ?: return isFormVisible()
+        val keys = grid.map { NodeFinder.bounds(it).flattenToString() }.toSet()
+        return waitFor(timeoutMs, 700L) { roots ->
+            val still = thumbnails(roots).count { NodeFinder.bounds(it).flattenToString() in keys }
+            if (still < keys.size / 2) true else null
+        } != null
     }
 
     // ---------------------------------------------------------------- isian form
@@ -477,52 +563,131 @@ class MarketAutomationService : AccessibilityService() {
     suspend fun inputDescription(description: String): Boolean =
         fillField(FbLabels.DESCRIPTION, description, scrollAttempts = 5)
 
+    private fun visibleKeysOfEditables(): Set<String> =
+        NodeFinder.visibleEditables(roots()).map { NodeFinder.key(it) }.toSet()
+
+    /** Kolom pencarian baru yang muncul setelah membuka pilihan (kategori/lokasi). */
+    private suspend fun waitNewEditable(before: Set<String>, timeoutMs: Long): AccessibilityNodeInfo? =
+        waitFor(timeoutMs) { roots ->
+            NodeFinder.visibleEditables(roots.filter { it.packageName?.toString() != packageName })
+                .firstOrNull { NodeFinder.key(it) !in before }
+        }
+
+    /** Opsi terlihat di bawah posisi [minTop] yang cocok dengan salah satu label. */
+    private fun findOptionBelow(labels: List<String>, minTop: Int): AccessibilityNodeInfo? {
+        val all = roots().filter { it.packageName?.toString() != packageName }.flatMap { r ->
+            NodeFinder.findAll(r) { n ->
+                n.isVisibleToUser && !NodeFinder.isEditable(n) && NodeFinder.bounds(n).top >= minTop
+            }
+        }
+        for (mode in listOf(MatchMode.EXACT, MatchMode.STARTS_WITH, MatchMode.CONTAINS)) {
+            all.filter { NodeFinder.matches(it, labels, mode) }
+                .minByOrNull { NodeFinder.bounds(it).top }
+                ?.let { return it }
+        }
+        return null
+    }
+
+    /** Baris hasil pencarian pertama di bawah [minTop] (cadangan bila nama persis tidak ada). */
+    private fun firstResultBelow(minTop: Int, typed: String): AccessibilityNodeInfo? {
+        val typedNorm = NodeFinder.normalize(typed)
+        return roots().filter { it.packageName?.toString() != packageName }.flatMap { r ->
+            NodeFinder.findAll(r) { n ->
+                n.isVisibleToUser && !NodeFinder.isEditable(n) &&
+                    NodeFinder.bounds(n).top >= minTop && NodeFinder.texts(n).isNotEmpty()
+            }
+        }.filter { n ->
+            NodeFinder.texts(n).none { NodeFinder.normalize(it) == typedNorm } && NodeFinder.hasClickableAncestor(n)
+        }.minByOrNull { NodeFinder.bounds(it).top }
+    }
+
+    /** Cari baris form berlabel [labels]; kembalikan teks di sekitarnya (nilai yang sedang terisi). */
+    private fun formRowText(labels: List<String>): String? {
+        val row = NodeFinder.findByLabels(fbRoots(), labels, MatchMode.STARTS_WITH, excludeEditable = false)
+            ?: return null
+        return NodeFinder.contextText(row, 1)
+    }
+
+    /**
+     * Pilih dari layar pencarian (kategori/lokasi): buka baris form, ketik di kolom pencarian
+     * yang baru muncul, lalu pilih hasil yang cocok. Cadangan: hasil teratas (dicatat di [lastNote]).
+     */
+    private suspend fun pickViaSearch(
+        rowLabels: List<String>,
+        query: String,
+        wanted: List<String>,
+        what: String,
+        stepDelay: Long
+    ): Boolean {
+        val before = visibleKeysOfEditables()
+        if (!openDropdown(rowLabels)) return false
+        delay(stepDelay)
+
+        val search = waitNewEditable(before, 3_000L)
+        val minTop: Int
+        if (search != null) {
+            setText(search, query)
+            delay(2_000L)
+            minTop = NodeFinder.bounds(search).bottom
+        } else {
+            // Daftar tanpa kolom pencarian (mis. sheet dari bawah).
+            minTop = (screenH * 0.15f).toInt()
+        }
+
+        val exact = waitFor(4_000L) { findOptionBelow(wanted, minTop) }
+        if (exact != null) {
+            Log.d(TAG, "$what dipilih: ${NodeFinder.label(exact)}")
+            return clickNode(exact)
+        }
+        if (search != null) {
+            val first = firstResultBelow(minTop, query)
+            if (first != null) {
+                val label = NodeFinder.texts(first).firstOrNull().orEmpty()
+                lastNote = "$what dipilih otomatis: \"$label\" — pastikan sesuai."
+                Log.d(TAG, "$what cadangan: $label")
+                return clickNode(first)
+            }
+        }
+        Log.d(TAG, "$what tidak ketemu. Layar: ${describeScreen()}")
+        return false
+    }
+
     /** Membuka pilihan kategori, mencari, lalu memilih hasil yang cocok. */
     suspend fun inputCategory(category: String, stepDelay: Long): Boolean {
-        if (!openDropdown(FbLabels.CATEGORY)) return false
-        delay(stepDelay)
-        val search = waitFor(2_500L) { roots ->
-            NodeFinder.findEditable(roots, FbLabels.SEARCH)
-                ?: roots.flatMap { r -> NodeFinder.findAll(r) { NodeFinder.isEditable(it) } }.firstOrNull()
-        }
-        if (search != null && !isFormVisible()) {
-            setText(search, category)
-            delay(1_500L)
-        }
-        val option = waitFor(5_000L) { NodeFinder.findByLabels(it, listOf(category), MatchMode.CONTAINS) }
-            ?: return false
-        return clickNode(option)
+        lastNote = null
+        if (formRowText(FbLabels.CATEGORY)?.contains(category, ignoreCase = true) == true) return true
+        // "Kesehatan & Kecantikan" -> cari juga "Kesehatan" bila hasil persis tidak ada.
+        val main = category.split('&', ',', '/').first().trim().ifBlank { category }
+        return pickViaSearch(FbLabels.CATEGORY, category, listOf(category, main), "Kategori", stepDelay)
     }
 
     suspend fun inputCondition(conditionLabels: List<String>, stepDelay: Long): Boolean {
+        lastNote = null
         if (!openDropdown(FbLabels.CONDITION)) return false
         delay(stepDelay)
-        val option = waitFor(4_000L) { NodeFinder.findByLabels(it, conditionLabels, MatchMode.STARTS_WITH) }
+        val option = waitFor(4_000L) { findOptionBelow(conditionLabels, (screenH * 0.1f).toInt()) }
             ?: return false
         return clickNode(option)
     }
 
     suspend fun inputLocation(location: String, stepDelay: Long): Boolean {
-        // Ada versi dengan kolom isian langsung, ada yang membuka layar pencarian.
-        val inline = waitFor(1_500L) { roots ->
-            NodeFinder.findEditable(roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }, FbLabels.LOCATION)
-        }
-        if (inline == null) {
-            if (!openDropdown(FbLabels.LOCATION)) return false
-            delay(stepDelay)
-            // Layar pencarian lokasi harus terbuka; jangan sampai mengetik di kolom lain di form.
-            if (isFormVisible()) return false
-        }
-        val field = inline ?: waitFor(3_000L) { roots ->
-            roots.flatMap { r -> NodeFinder.findAll(r) { NodeFinder.isEditable(it) } }.firstOrNull()
-        } ?: return false
+        lastNote = null
         // "Makassar, Sulawesi Selatan" -> ketik "Makassar", lalu pilih saran yang memuat nama kota.
         val city = location.substringBefore(',').trim().ifBlank { location }
-        if (!setText(field, city)) return false
-        delay(2_000L)
-        val suggestion = waitFor(5_000L) { NodeFinder.findByLabels(it, listOf(location, city), MatchMode.CONTAINS) }
-            ?: return false
-        return clickNode(suggestion)
+        if (formRowText(FbLabels.LOCATION)?.contains(city, ignoreCase = true) == true) {
+            Log.d(TAG, "Lokasi sudah $city")
+            return true
+        }
+        // Versi dengan kolom isian langsung di form.
+        val inline = NodeFinder.findEditable(fbRoots(), FbLabels.LOCATION)
+        if (inline != null) {
+            if (!setText(inline, city)) return false
+            delay(2_000L)
+            val s = waitFor(4_000L) { findOptionBelow(listOf(location, city), NodeFinder.bounds(inline).bottom) }
+                ?: return false
+            return clickNode(s)
+        }
+        return pickViaSearch(FbLabels.LOCATION, city, listOf(location, city), "Lokasi", stepDelay)
     }
 
     private suspend fun openDropdown(labels: List<String>): Boolean {

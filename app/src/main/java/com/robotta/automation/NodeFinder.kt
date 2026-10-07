@@ -133,5 +133,34 @@ object NodeFinder {
 
     fun bounds(node: AccessibilityNodeInfo): Rect = Rect().also { node.getBoundsInScreen(it) }
 
+    /** Kunci unik kasar untuk sebuah node: id + posisi di layar. */
+    fun key(node: AccessibilityNodeInfo): String =
+        "${node.viewIdResourceName}|${bounds(node).flattenToString()}"
+
+    fun visibleEditables(roots: List<AccessibilityNodeInfo>): List<AccessibilityNodeInfo> =
+        roots.flatMap { r -> findAll(r) { isEditable(it) && it.isVisibleToUser } }
+
+    /** True jika node atau salah satu induk terdekatnya bisa diklik. */
+    fun hasClickableAncestor(node: AccessibilityNodeInfo, depth: Int = 4): Boolean {
+        var current: AccessibilityNodeInfo? = node
+        var d = 0
+        while (current != null && d <= depth) {
+            if (current.isClickable) return true
+            current = current.parent
+            d++
+        }
+        return false
+    }
+
+    /** Semua teks di dalam induk node (untuk membaca nilai yang tampil di samping label). */
+    fun contextText(node: AccessibilityNodeInfo, levelsUp: Int = 1): String {
+        var target: AccessibilityNodeInfo = node
+        repeat(levelsUp) { target = target.parent ?: return@repeat }
+        return findAll(target) { texts(it).isNotEmpty() }
+            .take(30)
+            .flatMap { texts(it) }
+            .joinToString(" ")
+    }
+
     fun area(node: AccessibilityNodeInfo): Int = bounds(node).let { it.width() * it.height() }
 }

@@ -27,6 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +52,7 @@ fun MainScreen(
     val state by vm.engineState.collectAsStateWithLifecycle()
     val logs by vm.logs.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val clipboard = LocalClipboardManager.current
 
     val pending = products.count { it.status == ProductStatus.PENDING }
     val success = products.count { it.status == ProductStatus.SUCCESS }
@@ -106,7 +109,15 @@ fun MainScreen(
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("Log aktivitas", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (logs.isNotEmpty()) TextButton(onClick = vm::clearLogs) { Text("Bersihkan") }
+                if (logs.isNotEmpty()) {
+                    TextButton(onClick = {
+                        val text = logs.joinToString("\n") { l ->
+                            timeFormat.format(Date(l.time)) + (l.product?.let { " [$it]" } ?: "") + " " + l.message
+                        }
+                        clipboard.setText(AnnotatedString(text))
+                    }) { Text("Salin log") }
+                    TextButton(onClick = vm::clearLogs) { Text("Bersihkan") }
+                }
             }
         }
         if (logs.isEmpty()) {
