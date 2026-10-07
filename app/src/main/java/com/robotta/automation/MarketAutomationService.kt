@@ -215,9 +215,11 @@ class MarketAutomationService : AccessibilityService() {
     }
 
     fun tapAt(x: Float, y: Float): Boolean = try {
+        // Panel melayang tidak boleh "menangkap" ketukan otomatis.
+        panel?.passThroughBriefly()
         val path = Path().apply { moveTo(x, y) }
         val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0L, 60L))
+            .addStroke(GestureDescription.StrokeDescription(path, 80L, 60L))
             .build()
         dispatchGesture(gesture, null, null)
     } catch (e: Exception) {
@@ -329,9 +331,43 @@ class MarketAutomationService : AccessibilityService() {
             Log.d(TAG, "Tidak ketemu di Facebook: $labels")
             return false
         }
-        Log.d(TAG, "Tap (FB): ${NodeFinder.label(node)}")
-        return clickNode(node)
+        val label = NodeFinder.texts(node).firstOrNull()?.take(30).orEmpty()
+        val ok = tapAndVerify(node)
+        trail("Ketuk \"$label\" → ${if (ok) "layar berubah" else "tidak ada perubahan"}", withScreen = false)
+        return ok
     }
+
+    /** Ringkas isi layar (selain aplikasi ini) untuk mendeteksi perubahan setelah ketukan. */
+    private fun screenSignature(): Int = try {
+        roots().filter { it.packageName?.toString() != packageName }.flatMap { r ->
+            NodeFinder.findAll(r) { it.isVisibleToUser && NodeFinder.texts(it).isNotEmpty() }
+                .take(80)
+                .flatMap { NodeFinder.texts(it) }
+        }.joinToString("|").hashCode()
+    } catch (e: Exception) {
+        0
+    }
+
+    /**
+     * Ketuk seperti jari (gesture di tengah tombol), lalu pastikan layar berubah.
+     * Facebook kadang "menerima" klik aksesibilitas tanpa menjalankannya, jadi
+     * gesture dicoba dulu, lalu klik aksesibilitas sebagai cadangan.
+     */
+    suspend fun tapAndVerify(node: AccessibilityNodeInfo, waitMs: Long = 3_000L): Boolean {
+        val before = screenSignature()
+        fun changed(): Boolean? = if (screenSignature() != before) true else null
+        val b = NodeFinder.bounds(node)
+        if (!b.isEmpty && node.isVisibleToUser) {
+            tapAt(b.exactCenterX(), b.exactCenterY())
+            if (waitFor(waitMs, 300L) { changed() } != null) return true
+            Log.d(TAG, "Gesture tidak mengubah layar, coba klik aksesibilitas")
+        }
+        clickNode(node)
+        return waitFor(waitMs, 300L) { changed() } != null
+    }
+
+    /** Ambil lalu kosongkan jejak navigasi (untuk ditulis ke log aplikasi). */
+    fun takeTrail(): List<String> = navTrail.toList().also { navTrail.clear() }
 
     /** Ikon/tab Marketplace di bilah navigasi (atas atau bawah layar), bukan teks di dalam postingan. */
     private fun findMarketplaceTab(roots: List<AccessibilityNodeInfo>): AccessibilityNodeInfo? {
@@ -349,7 +385,9 @@ class MarketAutomationService : AccessibilityService() {
         val tab = waitFor(6_000L) { findMarketplaceTab(it) }
         if (tab != null) {
             Log.d(TAG, "Tap tab: ${NodeFinder.label(tab)}")
-            if (clickNode(tab)) return true
+            val ok = tapAndVerify(tab)
+            trail("Ketuk tab Marketplace → ${if (ok) "layar berubah" else "tidak ada perubahan"}", withScreen = false)
+            if (ok) return true
         }
         // Tab Marketplace tidak ada di bilah navigasi: buka lewat Menu (☰).
         Log.d(TAG, "Tab Marketplace tidak ada, coba lewat Menu")

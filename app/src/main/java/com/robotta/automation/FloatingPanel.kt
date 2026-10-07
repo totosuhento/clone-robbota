@@ -104,6 +104,30 @@ class FloatingPanel(private val context: Context) {
 
     // ---------------------------------------------------------------- isi
 
+    /** Panel dibuat tembus sentuhan & transparan supaya tidak menghalangi ketukan otomatis. */
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val restoreTouch = Runnable { setPassThrough(false) }
+
+    /** Tembus sentuhan sebentar, selama satu ketukan otomatis berlangsung. */
+    fun passThroughBriefly(durationMs: Long = 500L) {
+        if (root == null) return
+        setPassThrough(true)
+        handler.removeCallbacks(restoreTouch)
+        handler.postDelayed(restoreTouch, durationMs)
+    }
+
+    private fun setPassThrough(enabled: Boolean) {
+        val v = root ?: return
+        val lp = params ?: return
+        val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        val newFlags = if (enabled) lp.flags or flag else lp.flags and flag.inv()
+        val newAlpha = if (enabled) 0.55f else 1f
+        if (newFlags == lp.flags && lp.alpha == newAlpha) return
+        lp.flags = newFlags
+        lp.alpha = newAlpha
+        runCatching { wm.updateViewLayout(v, lp) }
+    }
+
     fun render(state: EngineState) {
         if (root == null) return
         try {

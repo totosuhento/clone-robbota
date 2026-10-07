@@ -231,7 +231,7 @@ object AutomationEngine {
         working(product, ActionStep.OPEN_FORM)
         if (!service.openSellForm(d)) {
             // Catat isi layar supaya label yang berbeda bisa ditambahkan ke FbLabels.
-            service.navTrail.forEach { log(product.title, "Jejak: $it", LogLevel.INFO) }
+            service.takeTrail().forEach { log(product.title, "Jejak: $it", LogLevel.INFO) }
             log(product.title, "Layar saat gagal: ${service.describeScreen(40)}", LogLevel.INFO)
             needsUser(
                 product,
@@ -246,17 +246,22 @@ object AutomationEngine {
             }
             log(product.title, "Form dibuka manual, lanjut mengisi.", LogLevel.INFO)
         }
+        service.takeTrail().takeIf { it.isNotEmpty() }?.let {
+            log(product.title, "Jejak buka form: " + it.joinToString(" ; "), LogLevel.INFO)
+        }
         delay(d)
 
         // 3. Foto
         working(product, ActionStep.SELECT_PHOTOS)
         when (service.selectPhotos(exported, settings.autoPickPhotos, d)) {
             PhotoPickResult.DONE -> {
+                service.takeTrail()
                 log(product.title, "$exported foto dipilih otomatis.", LogLevel.INFO)
                 service.lastNote?.let { warnings += it }
             }
             PhotoPickResult.NEED_USER -> {
                 if (settings.autoPickPhotos) {
+                    service.takeTrail().forEach { log(product.title, "Jejak foto: $it", LogLevel.INFO) }
                     log(product.title, "Layar (foto): ${service.describeScreen(30)}", LogLevel.INFO)
                 }
                 val msg = "Pilih $exported foto teratas (folder ${GalleryExporter.FOLDER}), lalu tekan Selesai. " +
