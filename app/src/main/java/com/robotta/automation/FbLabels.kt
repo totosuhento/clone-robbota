@@ -61,4 +61,14 @@ object FbLabels {
     val PUBLISH = listOf("Publikasikan", "Publish", "Terbitkan", "Pasang", "Post")
     /** Tombol lanjut di halaman form (sebelum layar Publikasikan). Juga tidak ditekan otomatis. */
     val FORM_NEXT = listOf("Berikutnya", "Next")
+
+    // ---------- Grup (Feature 4) ----------
+    /** Tombol Grup di navigasi / menu. */
+    val GROUPS = listOf("Grup", "Groups", "Group")
+    /** Label untuk field pencarian grup. */
+    val GROUP_SEARCH = listOf("Cari grup", "Search groups", "Search group")
+    /** Label tombol Bagikan / Share. */
+    val SHARE = listOf("Bagikan", "Share", "Kirim")
+    /** Label "Kirim ke Grup" atau "Post to Group". */
+    val POST_TO_GROUP = listOf("Kirim ke Grup", "Post to Group", "Kirim ke grup", "Post to group", "Bagikan ke Grup")
 }

@@ -57,6 +57,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         .map { it ?: Account() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Account())
 
+    // Multi-akun: observe semua akun
+    val allAccounts: StateFlow<List<Account>> = accountDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val _settings = MutableStateFlow(settingsStore.load())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
 
@@ -139,6 +143,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 Log.e(TAG, "Gagal menyimpan produk", e)
                 say("Gagal menyimpan: ${e.message}")
+            }
+        }
+    }
+
+    fun insertProductDirect(product: Product) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    productDao.insert(product)
+                }
+                say("Produk disimpan")
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal insert produk", e)
+                say("Gagal: ${e.message}")
             }
         }
     }
@@ -364,12 +382,71 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    accountDao.save(account.copy(id = Account.PROFILE_ID, updatedAt = System.currentTimeMillis()))
+                    accountDao.save(account.copy(updatedAt = System.currentTimeMillis()))
                 }
                 say("Profil disimpan")
             } catch (e: Exception) {
                 Log.e(TAG, "Gagal menyimpan profil", e)
                 say("Gagal menyimpan profil")
+            }
+        }
+    }
+
+    fun addAccount(name: String) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val existing = accountDao.getAll()
+                    val newId = (existing.maxOfOrNull { it.id } ?: 0) + 1
+                    accountDao.save(
+                        Account(
+                            id = newId,
+                            fbProfileName = name,
+                            isActive = existing.isEmpty(),
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+                say("Akun '$name' ditambahkan")
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal menambah akun", e)
+                say("Gagal: ${e.message}")
+            }
+        }
+    }
+
+    fun deleteAccount(id: Int) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    accountDao.deleteById(id)
+                    // Jika akun aktif dihapus, aktifkan akun lain
+                    val remaining = accountDao.getAll()
+                    if (remaining.isNotEmpty() && remaining.none { it.isActive }) {
+                        val first = remaining.first()
+                        accountDao.clearActive()
+                        accountDao.setActive(first.id)
+                    }
+                }
+                say("Akun dihapus")
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal menghapus akun", e)
+                say("Gagal: ${e.message}")
+            }
+        }
+    }
+
+    fun setActiveAccount(id: Int) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    accountDao.clearActive()
+                    accountDao.setActive(id)
+                }
+                say("Akun #$id aktif")
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal set akun aktif", e)
+                say("Gagal: ${e.message}")
             }
         }
     }
@@ -386,7 +463,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val pending = withContext(Dispatchers.IO) { productDao.getByStatus(ProductStatus.PENDING) }
-                val profile = withContext(Dispatchers.IO) { accountDao.getProfile() } ?: Account()
+                // Ambil akun aktif jika ada, atau profil default
+                val active = withContext(Dispatchers.IO) { accountDao.getActive() }
+                val profile = active ?: (withContext(Dispatchers.IO) { accountDao.getProfile() } ?: Account())
                 AutomationEngine.startSession(getApplication(), pending, _settings.value, profile)?.let { say(it) }
             } catch (e: Exception) {
                 Log.e(TAG, "Gagal memulai sesi", e)

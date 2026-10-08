@@ -23,6 +23,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,7 +41,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.robotta.data.AppSettings
 import com.robotta.data.Region
+import kotlin.math.roundToInt
 
 /** Daftar kabupaten/kota yang bisa dicari & difilter per provinsi. */
 @Composable
@@ -115,15 +119,77 @@ fun RegionPickerDialog(vm: AppViewModel, onDismiss: () -> Unit, onPick: (String)
 @Composable
 fun LocationScreen(vm: AppViewModel) {
     val account by vm.account.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
     var picked by remember { mutableStateOf<Region?>(null) }
 
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // State lokal untuk fitur Lokasi Random
+    var randomEnabled by rememberSaveable { mutableStateOf(settings.randomLocationEnabled) }
+    var randomCount by rememberSaveable { mutableStateOf(settings.randomLocationCount.toFloat()) }
+
+    LaunchedEffect(settings) {
+        randomEnabled = settings.randomLocationEnabled
+        randomCount = settings.randomLocationCount.toFloat()
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         ScreenHeader("Riset Lokasi", "514 kabupaten/kota se-Indonesia. Pilih lokasi tempat barangmu benar-benar berada.")
         SectionCard {
             Text("Lokasi default sekarang", style = MaterialTheme.typography.labelMedium)
             Text(account.defaultLocation.ifBlank { "Belum diatur" }, fontWeight = FontWeight.SemiBold)
         }
+
+        // ---------- Fitur Lokasi Random ----------
+        SectionCard(title = "Lokasi Random (Acak Kota)") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Acak lokasi", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Ganti kota secara acak untuk setiap produk saat posting.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = randomEnabled,
+                    onCheckedChange = {
+                        randomEnabled = it
+                        vm.saveSettings(
+                            settings.copy(
+                                randomLocationEnabled = it,
+                                randomLocationCount = randomCount.roundToInt()
+                            )
+                        )
+                    }
+                )
+            }
+            if (randomEnabled) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Jumlah kota acak: ${randomCount.roundToInt()}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = randomCount,
+                    onValueChange = { randomCount = it },
+                    valueRange = 1f..AppSettings.MAX_RANDOM_CITIES.toFloat(),
+                    steps = AppSettings.MAX_RANDOM_CITIES - 2
+                )
+                Text(
+                    "Setiap produk akan mendapat kota berbeda dari ${
+                        randomCount.roundToInt()
+                    } kota yang dipilih acak.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         RegionSearchList(vm, Modifier.weight(1f)) { picked = it }
     }
 

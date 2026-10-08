@@ -49,6 +49,11 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
     var showPanel by rememberSaveable { mutableStateOf(settings.showFloatingPanel) }
     var apiKey by rememberSaveable { mutableStateOf(settings.geminiApiKey) }
     var model by rememberSaveable { mutableStateOf(settings.geminiModel) }
+    // Fitur 2: Anti Duplikat
+    var antiDuplikat by rememberSaveable { mutableStateOf(settings.antiDuplikatEnabled) }
+    // Fitur 4: Share ke Grup
+    var autoShare by rememberSaveable { mutableStateOf(settings.autoShareGroups) }
+    var targetGroups by rememberSaveable { mutableStateOf(settings.targetGroups) }
 
     LaunchedEffect(settings) {
         delayMs = settings.stepDelayMs.toFloat()
@@ -57,6 +62,9 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
         showPanel = settings.showFloatingPanel
         apiKey = settings.geminiApiKey
         model = settings.geminiModel
+        antiDuplikat = settings.antiDuplikatEnabled
+        autoShare = settings.autoShareGroups
+        targetGroups = settings.targetGroups
     }
 
     Column(
@@ -135,6 +143,47 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
                 Spacer(Modifier.width(8.dp))
                 Switch(checked = showPanel, onCheckedChange = { showPanel = it })
             }
+
+            // ---------- Fitur 2: Anti Duplikat ----------
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Anti Duplikat", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Berikan jeda acak 30-60 detik antar posting untuk menghindari deteksi duplikat Facebook.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Switch(checked = antiDuplikat, onCheckedChange = { antiDuplikat = it })
+            }
+
+            // ---------- Fitur 4: Share ke Grup ----------
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Share ke grup setelah posting", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Bagikan postingan ke grup Facebook setelah berhasil dipublikasikan.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Switch(checked = autoShare, onCheckedChange = { autoShare = it })
+            }
+            if (autoShare) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = targetGroups,
+                    onValueChange = { targetGroups = it },
+                    label = { Text("Nama grup (pisah koma)") },
+                    placeholder = { Text("Grup Jual Beli Jakarta, Forum Jualan Indonesia") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
 
         SectionCard(title = "AI judul & deskripsi (Gemini)") {
@@ -173,7 +222,13 @@ fun AutomationScreen(vm: AppViewModel, accessibilityOn: Boolean, onOpenAccessibi
                         autoPickPhotos = autoPick,
                         showFloatingPanel = showPanel,
                         geminiApiKey = apiKey,
-                        geminiModel = model.ifBlank { AppSettings.DEFAULT_MODEL }
+                        geminiModel = model.ifBlank { AppSettings.DEFAULT_MODEL },
+                        activeAccountId = settings.activeAccountId,
+                        antiDuplikatEnabled = antiDuplikat,
+                        randomLocationEnabled = settings.randomLocationEnabled,
+                        randomLocationCount = settings.randomLocationCount,
+                        autoShareGroups = autoShare,
+                        targetGroups = targetGroups
                     )
                 )
             },

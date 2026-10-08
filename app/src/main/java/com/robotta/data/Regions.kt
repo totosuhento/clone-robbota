@@ -2,6 +2,7 @@ package com.robotta.data
 
 import android.content.Context
 import android.util.Log
+import kotlin.random.Random
 
 /** Satu kabupaten/kota di Indonesia (514 data, dari assets/wilayah.txt). */
 data class Region(val name: String, val type: String, val province: String) {
@@ -44,5 +45,17 @@ object Regions {
             }
             .sortedWith(compareBy({ !it.name.lowercase().startsWith(q) }, { it.name }))
             .toList()
+    }
+
+    /**
+     * Mengambil [count] kota unik secara acak dari seluruh wilayah Indonesia.
+     * Digunakan untuk fitur Lokasi Random.
+     */
+    fun getRandomCities(context: Context, count: Int): List<String> {
+        val allCities = all(context)
+        if (allCities.isEmpty()) return emptyList()
+        val shuffled = allCities.shuffled(Random(System.currentTimeMillis()))
+        return shuffled.take(count.coerceIn(1, allCities.size))
+            .map { it.locationText }
     }
 }

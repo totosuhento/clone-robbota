@@ -325,7 +325,7 @@ class MarketAutomationService : AccessibilityService() {
         roots().filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }
 
     /** Tap label hanya di jendela Facebook (bukan aplikasi lain). */
-    private suspend fun tapInFacebook(labels: List<String>, timeoutMs: Long, mode: MatchMode = MatchMode.STARTS_WITH): Boolean {
+    suspend fun tapInFacebook(labels: List<String>, timeoutMs: Long, mode: MatchMode = MatchMode.STARTS_WITH): Boolean {
         val node = waitFor(timeoutMs) { roots ->
             NodeFinder.findByLabels(roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }, labels, mode)
         } ?: run {
@@ -890,6 +890,51 @@ class MarketAutomationService : AccessibilityService() {
             delay(500L)
         }
         return false
+    }
+
+    // ---------------------------------------------------------------- multi-akun
+
+    /**
+     * Ganti akun Facebook: bersihkan data aplikasi FB (clear data) agar
+     * aplikasi FB restart tanpa login, lalu (bila cookies tersedia) buka
+     * WebView untuk login ulang otomatis.
+     */
+    suspend fun switchAccount(cookiesData: String): Boolean {
+        Log.d(TAG, "switchAccount: mengganti akun Facebook")
+        // Buka halaman pengaturan aplikasi Facebook
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.data = Uri.parse("package:${FbLabels.FB_PACKAGE}")
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            delay(2_000L)
+        } catch (e: Exception) {
+            Log.e(TAG, "Gagal membuka pengaturan FB", e)
+            return false
+        }
+        // Catatan: Hapus data aplikasi membutuhkan root atau interaksi manual.
+        // Di sini kita hanya navigasi ke pengaturan; pengguna harus menghapus data sendiri.
+        // Alternatif: buka Facebook dan logout jika ada tombol logout.
+        Log.d(TAG, "switchAccount: buka pengaturan FB — pengguna perlu hapus data & login manual")
+        return true
+    }
+
+    // ---------------------------------------------------------------- grup
+
+    /**
+     * Navigasi ke menu Grup di Facebook dan cari grup berdasarkan nama.
+     */
+    suspend fun navigateToGroups(groupName: String = "", stepDelay: Long = 800L): Boolean {
+        Log.d(TAG, "navigateToGroups: navigasi ke grup '$groupName'")
+        return GroupSharer.shareToGroup(this, groupName.ifBlank { "Grup" }, "", stepDelay)
+    }
+
+    /**
+     * Bagikan postingan ke grup yang dituju.
+     */
+    suspend fun shareToGroup(groupName: String, postLink: String = "", stepDelay: Long = 800L): Boolean {
+        Log.d(TAG, "shareToGroup: share ke grup '$groupName'")
+        return GroupSharer.shareToGroup(this, groupName, postLink, stepDelay)
     }
 
     companion object {

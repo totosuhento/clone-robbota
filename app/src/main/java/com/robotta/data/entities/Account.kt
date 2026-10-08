@@ -4,13 +4,12 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Profil toko. Aplikasi bekerja dengan SATU akun Facebook, yaitu akun yang
- * sedang login di aplikasi Facebook pada HP ini. Profil ini menyimpan data
- * pelengkap yang dipakai saat mengisi form dan membuat bingkai foto.
+ * Profil toko / akun Facebook. Mendukung banyak akun, masing-masing dengan cookies
+ * untuk login ulang otomatis.
  */
 @Entity(tableName = "accounts")
 data class Account(
-    @PrimaryKey val id: Int = PROFILE_ID,
+    @PrimaryKey val id: Int = 1,
     val storeName: String = "",
     /** Catatan nama akun FB yang login, hanya untuk pengingat. */
     val fbProfileName: String = "",
@@ -18,6 +17,12 @@ data class Account(
     val whatsapp: String = "",
     /** Ditambahkan di akhir setiap deskripsi produk. */
     val descriptionFooter: String = "",
+    /** Data cookies dari WebView login (format JSON). */
+    val cookiesData: String = "",
+    /** Apakah akun ini yang aktif dipakai untuk posting. */
+    val isActive: Boolean = false,
+    /** Timestamp terakhir akun ini dipakai. */
+    val lastUsedAt: Long = 0L,
     val updatedAt: Long = System.currentTimeMillis()
 ) {
     fun buildFooter(): String {

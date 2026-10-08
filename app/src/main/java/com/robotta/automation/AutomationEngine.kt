@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.robotta.data.Regions
+import kotlin.random.Random
 import java.io.File
 
 /**
@@ -56,6 +58,13 @@ object AutomationEngine {
     private var postedCount = 0
     private var job: Job? = null
 
+    // ---------- Fitur 3: Lokasi Random ----------
+    private var randomCities: List<String> = emptyList()
+    private var randomCityIndex = 0
+
+    // ---------- Fitur 4: Share ke Grup ----------
+    private var currentProductTitleForShare: String = ""
+
     // ---------------------------------------------------------------- API untuk UI
 
     /** @return pesan error untuk ditampilkan, atau null jika sesi dimulai. */
@@ -81,6 +90,14 @@ object AutomationEngine {
         queue = pending.take(settings.sessionLimit)
         index = 0
         postedCount = 0
+        // Inisialisasi lokasi random jika fitur aktif
+        if (settings.randomLocationEnabled) {
+            randomCities = Regions.getRandomCities(context, settings.randomLocationCount)
+            randomCityIndex = 0
+            log(null, "Lokasi random: ${randomCities.size} kota tersedia.", LogLevel.INFO)
+        } else {
+            randomCities = emptyList()
+        }
         log(null, "Sesi dimulai: ${queue.size} produk (batas sesi ${settings.sessionLimit}).", LogLevel.INFO)
         prepareCurrent()
         return null
@@ -117,12 +134,52 @@ object AutomationEngine {
                 NotificationHelper.Action("Berhenti", EngineActionReceiver.ACTION_STOP)
             ) else listOf(NotificationHelper.Action("Selesai", EngineActionReceiver.ACTION_STOP))
         )
+
+        // Fitur 4: Share ke Grup — jalankan di background tanpa blokir
+        if (settings.autoShareGroups && settings.targetGroups.isNotBlank()) {
+            currentProductTitleForShare = product.title
+            scope.launch {
+                doShareToGroups()
+            }
+        }
+    }
+
+    /** Bagikan postingan ke grup-grup yang ditentukan. */
+    private suspend fun doShareToGroups() {
+        val service = MarketAutomationService.instance ?: return
+        val groups = settings.targetGroups.split(',').map { it.trim() }.filter { it.isNotBlank() }
+        if (groups.isEmpty()) return
+        log(null, "Share ke grup: ${groups.size} grup target.", LogLevel.INFO)
+        for (group in groups) {
+            log(currentProductTitleForShare, "Membagikan ke grup: $group", LogLevel.INFO)
+            try {
+                service.navigateToMarketplace()
+                kotlinx.coroutines.delay(settings.stepDelayMs * 2)
+                service.shareToGroup(group, "", settings.stepDelayMs)
+                kotlinx.coroutines.delay(2_000L)
+            } catch (e: Exception) {
+                log(null, "Gagal share ke grup '$group': ${e.message}", LogLevel.WARN)
+            }
+        }
+        log(null, "Selesai share ke grup.", LogLevel.INFO)
     }
 
     fun nextProduct() {
         if (_state.value !is EngineState.Posted) return
         index++
-        if (index >= queue.size) finish() else prepareCurrent()
+        if (index >= queue.size) finish() else {
+            // Fitur 2: Anti Duplikat — jeda 30-60 detik antar produk
+            if (settings.antiDuplikatEnabled && index > 0) {
+                val delayMs = (30_000L + Random.nextLong(31_000L)).coerceAtMost(60_000L)
+                log(null, "Anti duplikat: jeda ${delayMs / 1000} detik sebelum produk berikutnya.", LogLevel.INFO)
+                scope.launch {
+                    delay(delayMs)
+                    prepareCurrent()
+                }
+            } else {
+                prepareCurrent()
+            }
+        }
     }
 
     fun skipCurrent() {
@@ -334,7 +391,9 @@ object AutomationEngine {
         optional(ActionStep.FILL_DESCRIPTION, description.isBlank(), "Deskripsi belum terisi — tempel manual.") {
             service.inputDescription(description)
         }
-        val location = product.location.ifBlank { account.defaultLocation }
+        val location = product.location.ifBlank {
+            if (settings.randomLocationEnabled) getNextCity() else account.defaultLocation
+        }
         optional(ActionStep.FILL_LOCATION, location.isBlank(), "Lokasi \"$location\" belum terpilih — cek lokasinya.") {
             service.inputLocation(location, d)
         }
@@ -366,6 +425,14 @@ object AutomationEngine {
         return listOf(product.description.trim(), footer, product.hashtags.trim())
             .filter { it.isNotBlank() }
             .joinToString("\n\n")
+    }
+
+    /** Ambil kota berikutnya dari daftar random (bergilir). */
+    private fun getNextCity(): String {
+        if (randomCities.isEmpty()) return ""
+        val city = randomCities[randomCityIndex % randomCities.size]
+        randomCityIndex++
+        return city
     }
 
     // ---------------------------------------------------------------- helper status
