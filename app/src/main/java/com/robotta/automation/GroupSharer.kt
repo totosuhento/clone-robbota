@@ -30,10 +30,13 @@ object GroupSharer {
         Log.d(TAG, "Mulai share ke grup: $groupName")
 
         // Cari tab Grup
-        val groupsTab = service.waitFor(5_000L) { roots ->
+        val groupsTab: AccessibilityNodeInfo? = service.waitFor(5_000L) { roots ->
             val fb = roots.filter { it.packageName?.toString() == FbLabels.FB_PACKAGE }
             NodeFinder.findByLabels(fb, FbLabels.GROUPS, MatchMode.CONTAINS)
-        } ?: run {
+        }
+        if (groupsTab != null) {
+            service.tapAndVerify(groupsTab)
+        } else {
             Log.d(TAG, "Tab Grup tidak ditemukan, coba lewat Menu")
             // Coba navigasi via Menu -> Grup
             if (!service.tapInFacebook(FbLabels.MENU, 3_000L, MatchMode.EXACT) &&
@@ -41,10 +44,6 @@ object GroupSharer {
             ) return false
             kotlinx.coroutines.delay(1_500L)
             if (!service.tapInFacebook(FbLabels.GROUPS, 4_000L, MatchMode.CONTAINS)) return false
-            return@run true
-        }
-        if (groupsTab != null) {
-            service.tapAndVerify(groupsTab)
         }
         kotlinx.coroutines.delay(stepDelay * 2)
 

@@ -35,7 +35,7 @@ interface AccountDao {
     suspend fun clearActive()
 
     @Query("UPDATE accounts SET isActive = 1, lastUsedAt = :now WHERE id = :id")
-    suspend fun setActive(id: Int, now: Long = System.currentTimeMillis())
+    suspend fun setActive(id: Int, now: Long)
 
     @Query("SELECT * FROM accounts WHERE isActive = 1 LIMIT 1")
     suspend fun getActive(): Account?

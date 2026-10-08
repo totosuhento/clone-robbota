@@ -575,108 +575,39 @@ fun AddProductScreen(vm: AppViewModel, productId: Int, onClose: () -> Unit) {
 }
 
 // ---------- Unicode helpers untuk variasi judul anti-duplikat ----------
+// Huruf "Mathematical Alphanumeric Symbols" berada di luar BMP (2 unit UTF-16),
+// jadi tidak muat di tipe Char. Konversi dilakukan per code point ke String.
 
-/** Convert ke Unicode bold (𝐁𝐞𝐫𝐚𝐬). */
-private fun unicodeBold(text: String): String {
-    val map = mapOf(
-        'A' to '\uD835\uDC00', 'B' to '\uD835\uDC01', 'C' to '\uD835\uDC02', 'D' to '\uD835\uDC03',
-        'E' to '\uD835\uDC04', 'F' to '\uD835\uDC05', 'G' to '\uD835\uDC06', 'H' to '\uD835\uDC07',
-        'I' to '\uD835\uDC08', 'J' to '\uD835\uDC09', 'K' to '\uD835\uDC0A', 'L' to '\uD835\uDC0B',
-        'M' to '\uD835\uDC0C', 'N' to '\uD835\uDC0D', 'O' to '\uD835\uDC0E', 'P' to '\uD835\uDC0F',
-        'Q' to '\uD835\uDC10', 'R' to '\uD835\uDC11', 'S' to '\uD835\uDC12', 'T' to '\uD835\uDC13',
-        'U' to '\uD835\uDC14', 'V' to '\uD835\uDC15', 'W' to '\uD835\uDC16', 'X' to '\uD835\uDC17',
-        'Y' to '\uD835\uDC18', 'Z' to '\uD835\uDC19',
-        'a' to '\uD835\uDC1A', 'b' to '\uD835\uDC1B', 'c' to '\uD835\uDC1C', 'd' to '\uD835\uDC1D',
-        'e' to '\uD835\uDC1E', 'f' to '\uD835\uDC1F', 'g' to '\uD835\uDC20', 'h' to '\uD835\uDC21',
-        'i' to '\uD835\uDC22', 'j' to '\uD835\uDC23', 'k' to '\uD835\uDC24', 'l' to '\uD835\uDC25',
-        'm' to '\uD835\uDC26', 'n' to '\uD835\uDC27', 'o' to '\uD835\uDC28', 'p' to '\uD835\uDC29',
-        'q' to '\uD835\uDC2A', 'r' to '\uD835\uDC2B', 's' to '\uD835\uDC2C', 't' to '\uD835\uDC2D',
-        'u' to '\uD835\uDC2E', 'v' to '\uD835\uDC2F', 'w' to '\uD835\uDC30', 'x' to '\uD835\uDC31',
-        'y' to '\uD835\uDC32', 'z' to '\uD835\uDC33'
-    )
-    return text.map { map[it] ?: it }.joinToString("")
+/** Ganti A-Z / a-z dengan huruf gaya Unicode mulai dari [upperStart] & [lowerStart]. */
+private fun unicodeStyle(
+    text: String,
+    upperStart: Int,
+    lowerStart: Int,
+    exceptions: Map<Char, Int> = emptyMap()
+): String {
+    val sb = StringBuilder(text.length * 2)
+    for (c in text) {
+        val cp = exceptions[c] ?: when (c) {
+            in 'A'..'Z' -> upperStart + (c - 'A')
+            in 'a'..'z' -> lowerStart + (c - 'a')
+            else -> null
+        }
+        if (cp != null) sb.appendCodePoint(cp) else sb.append(c)
+    }
+    return sb.toString()
 }
 
-/** Convert ke Unicode italic (𝘉𝘦𝘳𝘢𝘴). */
-private fun unicodeItalic(text: String): String {
-    val map = mapOf(
-        'A' to '\uD835\uDC34', 'B' to '\uD835\uDC35', 'C' to '\uD835\uDC36', 'D' to '\uD835\uDC37',
-        'E' to '\uD835\uDC38', 'F' to '\uD835\uDC39', 'G' to '\uD835\uDC3A', 'H' to '\uD835\uDC3B',
-        'I' to '\uD835\uDC3C', 'J' to '\uD835\uDC3D', 'K' to '\uD835\uDC3E', 'L' to '\uD835\uDC3F',
-        'M' to '\uD835\uDC40', 'N' to '\uD835\uDC41', 'O' to '\uD835\uDC42', 'P' to '\uD835\uDC43',
-        'Q' to '\uD835\uDC44', 'R' to '\uD835\uDC45', 'S' to '\uD835\uDC46', 'T' to '\uD835\uDC47',
-        'U' to '\uD835\uDC48', 'V' to '\uD835\uDC49', 'W' to '\uD835\uDC4A', 'X' to '\uD835\uDC4B',
-        'Y' to '\uD835\uDC4C', 'Z' to '\uD835\uDC4D',
-        'a' to '\uD835\uDC4E', 'b' to '\uD835\uDC4F', 'c' to '\uD835\uDC50', 'd' to '\uD835\uDC51',
-        'e' to '\uD835\uDC52', 'f' to '\uD835\uDC53', 'g' to '\uD835\uDC54', 'h' to '\uD835\uDC55',
-        'i' to '\uD835\uDC56', 'j' to '\uD835\uDC57', 'k' to '\uD835\uDC58', 'l' to '\uD835\uDC59',
-        'm' to '\uD835\uDC5A', 'n' to '\uD835\uDC5B', 'o' to '\uD835\uDC5C', 'p' to '\uD835\uDC5D',
-        'q' to '\uD835\uDC5E', 'r' to '\uD835\uDC5F', 's' to '\uD835\uDC60', 't' to '\uD835\uDC61',
-        'u' to '\uD835\uDC62', 'v' to '\uD835\uDC63', 'w' to '\uD835\uDC64', 'x' to '\uD835\uDC65',
-        'y' to '\uD835\uDC66', 'z' to '\uD835\uDC67'
-    )
-    return text.map { map[it] ?: it }.joinToString("")
-}
+/** Bold serif (𝐁𝐞𝐫𝐚𝐬). */
+private fun unicodeBold(text: String) = unicodeStyle(text, 0x1D400, 0x1D41A)
 
-/** Convert ke Unicode bold italic (𝘽𝙚𝙧𝙖𝙨). */
-private fun unicodeBoldItalic(text: String): String {
-    val map = mapOf(
-        'A' to '\uD835\uDC68', 'B' to '\uD835\uDC69', 'C' to '\uD835\uDC6A', 'D' to '\uD835\uDC6B',
-        'E' to '\uD835\uDC6C', 'F' to '\uD835\uDC6D', 'G' to '\uD835\uDC6E', 'H' to '\uD835\uDC6F',
-        'I' to '\uD835\uDC70', 'J' to '\uD835\uDC71', 'K' to '\uD835\uDC72', 'L' to '\uD835\uDC73',
-        'M' to '\uD835\uDC74', 'N' to '\uD835\uDC75', 'O' to '\uD835\uDC76', 'P' to '\uD835\uDC77',
-        'Q' to '\uD835\uDC78', 'R' to '\uD835\uDC79', 'S' to '\uD835\uDC7A', 'T' to '\uD835\uDC7B',
-        'U' to '\uD835\uDC7C', 'V' to '\uD835\uDC7D', 'W' to '\uD835\uDC7E', 'X' to '\uD835\uDC7F',
-        'Y' to '\uD835\uDC80', 'Z' to '\uD835\uDC81',
-        'a' to '\uD835\uDC82', 'b' to '\uD835\uDC83', 'c' to '\uD835\uDC84', 'd' to '\uD835\uDC85',
-        'e' to '\uD835\uDC86', 'f' to '\uD835\uDC87', 'g' to '\uD835\uDC88', 'h' to '\uD835\uDC89',
-        'i' to '\uD835\uDC8A', 'j' to '\uD835\uDC8B', 'k' to '\uD835\uDC8C', 'l' to '\uD835\uDC8D',
-        'm' to '\uD835\uDC8E', 'n' to '\uD835\uDC8F', 'o' to '\uD835\uDC90', 'p' to '\uD835\uDC91',
-        'q' to '\uD835\uDC92', 'r' to '\uD835\uDC93', 's' to '\uD835\uDC94', 't' to '\uD835\uDC95',
-        'u' to '\uD835\uDC96', 'v' to '\uD835\uDC97', 'w' to '\uD835\uDC98', 'x' to '\uD835\uDC99',
-        'y' to '\uD835\uDC9A', 'z' to '\uD835\uDC9B'
-    )
-    return text.map { map[it] ?: it }.joinToString("")
-}
+/** Italic serif (𝐵𝑒𝑟𝑎𝑠). Huruf 'h' italic ada di U+210E. */
+private fun unicodeItalic(text: String) = unicodeStyle(text, 0x1D434, 0x1D44E, mapOf('h' to 0x210E))
 
-/** Convert ke Unicode monospace (𝙱𝚎𝚛𝚊𝚜). */
-private fun unicodeMonospace(text: String): String {
-    val map = mapOf(
-        'A' to '\uD835\uDC9C', 'B' to '\uD835\uDC9D', 'C' to '\uD835\uDC9E', 'D' to '\uD835\uDC9F',
-        'E' to '\uD835\uDCA0', 'F' to '\uD835\uDCA1', 'G' to '\uD835\uDCA2', 'H' to '\uD835\uDCA3',
-        'I' to '\uD835\uDCA4', 'J' to '\uD835\uDCA5', 'K' to '\uD835\uDCA6', 'L' to '\uD835\uDCA7',
-        'M' to '\uD835\uDCA8', 'N' to '\uD835\uDCA9', 'O' to '\uD835\uDCAA', 'P' to '\uD835\uDCAB',
-        'Q' to '\uD835\uDCAC', 'R' to '\uD835\uDCAD', 'S' to '\uD835\uDCAE', 'T' to '\uD835\uDCAF',
-        'U' to '\uD835\uDCB0', 'V' to '\uD835\uDCB1', 'W' to '\uD835\uDCB2', 'X' to '\uD835\uDCB3',
-        'Y' to '\uD835\uDCB4', 'Z' to '\uD835\uDCB5',
-        'a' to '\uD835\uDCB6', 'b' to '\uD835\uDCB7', 'c' to '\uD835\uDCB8', 'd' to '\uD835\uDCB9',
-        'e' to '\uD835\uDCBA', 'f' to '\uD835\uDCBB', 'g' to '\uD835\uDCBC', 'h' to '\uD835\uDCBD',
-        'i' to '\uD835\uDCBE', 'j' to '\uD835\uDCBF', 'k' to '\uD835\uDCC0', 'l' to '\uD835\uDCC1',
-        'm' to '\uD835\uDCC2', 'n' to '\uD835\uDCC3', 'o' to '\uD835\uDCC4', 'p' to '\uD835\uDCC5',
-        'q' to '\uD835\uDCC6', 'r' to '\uD835\uDCC7', 's' to '\uD835\uDCC8', 't' to '\uD835\uDCC9',
-        'u' to '\uD835\uDCCA', 'v' to '\uD835\uDCCB', 'w' to '\uD835\uDCCC', 'x' to '\uD835\uDCCD',
-        'y' to '\uD835\uDCCE', 'z' to '\uD835\uDCCF'
-    )
-    return text.map { map[it] ?: it }.joinToString("")
-}
+/** Bold italic serif (𝑩𝒆𝒓𝒂𝒔). */
+private fun unicodeBoldItalic(text: String) = unicodeStyle(text, 0x1D468, 0x1D482)
 
-/** Convert ke Unicode sans-serif bold (𝗕𝗲𝗿𝗮𝘀). */
-private fun unicodeSansBold(text: String): String {
-    val map = mapOf(
-        'A' to '\uD835\uDDD4', 'B' to '\uD835\uDDD5', 'C' to '\uD835\uDDD6', 'D' to '\uD835\uDDD7',
-        'E' to '\uD835\uDDD8', 'F' to '\uD835\uDDD9', 'G' to '\uD835\uDDDA', 'H' to '\uD835\uDDDB',
-        'I' to '\uD835\uDDDC', 'J' to '\uD835\uDDDD', 'K' to '\uD835\uDDDE', 'L' to '\uD835\uDDDF',
-        'M' to '\uD835\uDDE0', 'N' to '\uD835\uDDE1', 'O' to '\uD835\uDDE2', 'P' to '\uD835\uDDE3',
-        'Q' to '\uD835\uDDE4', 'R' to '\uD835\uDDE5', 'S' to '\uD835\uDDE6', 'T' to '\uD835\uDDE7',
-        'U' to '\uD835\uDDE8', 'V' to '\uD835\uDDE9', 'W' to '\uD835\uDDEA', 'X' to '\uD835\uDDEB',
-        'Y' to '\uD835\uDDEC', 'Z' to '\uD835\uDDED',
-        'a' to '\uD835\uDDEE', 'b' to '\uD835\uDDEF', 'c' to '\uD835\uDDF0', 'd' to '\uD835\uDDF1',
-        'e' to '\uD835\uDDF2', 'f' to '\uD835\uDDF3', 'g' to '\uD835\uDDF4', 'h' to '\uD835\uDDF5',
-        'i' to '\uD835\uDDF6', 'j' to '\uD835\uDDF7', 'k' to '\uD835\uDDF8', 'l' to '\uD835\uDDF9',
-        'm' to '\uD835\uDDFA', 'n' to '\uD835\uDDFB', 'o' to '\uD835\uDDFC', 'p' to '\uD835\uDDFD',
-        'q' to '\uD835\uDDFE', 'r' to '\uD835\uDDFF', 's' to '\uD835\uDE00', 't' to '\uD835\uDE01',
-        'u' to '\uD835\uDE02', 'v' to '\uD835\uDE03', 'w' to '\uD835\uDE04', 'x' to '\uD835\uDE05',
-        'y' to '\uD835\uDE06', 'z' to '\uD835\uDE07'
-    )
-    return text.map { map[it] ?: it }.joinToString("")
-}
+/** Monospace (𝙱𝚎𝚛𝚊𝚜). */
+private fun unicodeMonospace(text: String) = unicodeStyle(text, 0x1D670, 0x1D68A)
+
+/** Sans-serif bold (𝗕𝗲𝗿𝗮𝘀). */
+private fun unicodeSansBold(text: String) = unicodeStyle(text, 0x1D5D4, 0x1D5EE)

@@ -425,7 +425,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (remaining.isNotEmpty() && remaining.none { it.isActive }) {
                         val first = remaining.first()
                         accountDao.clearActive()
-                        accountDao.setActive(first.id)
+                        accountDao.setActive(first.id, System.currentTimeMillis())
                     }
                 }
                 say("Akun dihapus")
@@ -441,7 +441,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 withContext(Dispatchers.IO) {
                     accountDao.clearActive()
-                    accountDao.setActive(id)
+                    accountDao.setActive(id, System.currentTimeMillis())
                 }
                 say("Akun #$id aktif")
             } catch (e: Exception) {
