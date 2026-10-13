@@ -58,4 +58,18 @@ object Regions {
         return shuffled.take(count.coerceIn(1, allCities.size))
             .map { it.locationText }
     }
+ private var randomIndex = 0
+
+    fun getRandomCities(context: Context, count: Int): List<String> {
+        val list = all(context)
+        if (list.isEmpty()) return emptyList()
+        return list.shuffled().take(count.coerceIn(1, list.size)).map { it.locationText }
+    }
+
+    fun getNextRandomCity(context: Context, cities: List<String>): String {
+        if (cities.isEmpty()) return ""
+        if (randomIndex >= cities.size) randomIndex = 0
+        return cities[randomIndex++]
+    }
+    
 }
